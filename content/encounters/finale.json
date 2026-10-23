@@ -1,0 +1,187 @@
+{
+  "id": "finale",
+  "title": "만조",
+  "notes": "예시: 10번째로 고정 등장하는 마지막 인카운터. 엔딩 효과.",
+  "spawn": {
+    "mode": "fixed",
+    "weight": 10,
+    "repeatable": false,
+    "cooldown": 0,
+    "minTurn": null,
+    "maxTurn": null,
+    "fixedTurn": 10,
+    "after": [],
+    "condition": null
+  },
+  "start": "start",
+  "nodes": [
+    {
+      "id": "start",
+      "text": "만조의 밤. 마을 사람들이 횃불을 들고 바다로 걸어간다. 파도 사이로 거대한 문이 솟아오른다.\n문틈으로 형의 목소리가 들린다.",
+      "extraTexts": [
+        {
+          "id": "t_1xdauwo2q",
+          "condition": {
+            "type": "all",
+            "items": [
+              {
+                "type": "trait",
+                "id": "marked",
+                "has": true
+              }
+            ]
+          },
+          "text": "당신의 목덜미에서 비늘이 반짝인다. 사람들이 당신에게 길을 비켜 준다."
+        }
+      ],
+      "effects": [],
+      "choices": [
+        {
+          "id": "c_1xdastg2t",
+          "text": "은빛 열쇠로 문을 잠근다",
+          "showIf": null,
+          "require": {
+            "type": "all",
+            "items": [
+              {
+                "type": "item",
+                "id": "silver_key",
+                "op": ">=",
+                "value": 1
+              }
+            ]
+          },
+          "branches": [
+            {
+              "id": "b_1xda1v02r",
+              "condition": null,
+              "outcomes": [
+                {
+                  "id": "o_1xdam3t2s",
+                  "weight": 1,
+                  "text": "열쇠는 비명을 지르며 돌아갔다. 문이 가라앉고, 바다는 잠잠해졌다. 형의 목소리도 함께.",
+                  "effects": [
+                    {
+                      "type": "ending",
+                      "endingId": "sealed"
+                    }
+                  ],
+                  "next": null
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c_1xdahxl2y",
+          "text": "문 너머로 걸어 들어간다",
+          "showIf": null,
+          "require": null,
+          "branches": [
+            {
+              "id": "b_1xdaych2u",
+              "condition": {
+                "type": "all",
+                "items": [
+                  {
+                    "type": "trait",
+                    "id": "marked",
+                    "has": true
+                  }
+                ]
+              },
+              "outcomes": [
+                {
+                  "id": "o_1xdaidz2v",
+                  "weight": 1,
+                  "text": "물이 당신을 밀어내지 않는다. 오히려 당신을 안아 든다.",
+                  "effects": [
+                    {
+                      "type": "ending",
+                      "endingId": "deep_one"
+                    }
+                  ],
+                  "next": null
+                }
+              ]
+            },
+            {
+              "id": "b_1xdasny2w",
+              "condition": null,
+              "outcomes": [
+                {
+                  "id": "o_1xdajsj2x",
+                  "weight": 1,
+                  "text": "물이 당신의 폐를 채운다. 문은 당신을 위해 열린 것이 아니었다.",
+                  "effects": [
+                    {
+                      "type": "stat",
+                      "stat": "hp",
+                      "value": -3,
+                      "valueMax": null
+                    }
+                  ],
+                  "next": null
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c_1xda60e33",
+          "text": "등을 돌려 도망친다",
+          "showIf": null,
+          "require": null,
+          "branches": [
+            {
+              "id": "b_1xdavmn2z",
+              "condition": {
+                "type": "all",
+                "items": [
+                  {
+                    "type": "stat",
+                    "stat": "sanity",
+                    "op": ">=",
+                    "value": 40
+                  }
+                ]
+              },
+              "outcomes": [
+                {
+                  "id": "o_1xda7q630",
+                  "weight": 1,
+                  "text": "당신은 뒤돌아보지 않고 달렸다.",
+                  "effects": [
+                    {
+                      "type": "ending",
+                      "endingId": "escaped"
+                    }
+                  ],
+                  "next": null
+                }
+              ]
+            },
+            {
+              "id": "b_1xdafvl31",
+              "condition": null,
+              "outcomes": [
+                {
+                  "id": "o_1xdann132",
+                  "weight": 1,
+                  "text": "다리가 움직이지 않는다. 당신은 웃기 시작했다.",
+                  "effects": [
+                    {
+                      "type": "ending",
+                      "endingId": "madness"
+                    }
+                  ],
+                  "next": null
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

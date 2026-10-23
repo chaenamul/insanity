@@ -1,0 +1,148 @@
+{
+  "id": "dock_man",
+  "title": "부두의 사내",
+  "notes": "예시: 아이템 소모, 확률 결과(7:3), 체력 감소.",
+  "spawn": {
+    "mode": "random",
+    "weight": 8,
+    "repeatable": false,
+    "cooldown": 0,
+    "minTurn": null,
+    "maxTurn": null,
+    "fixedTurn": 1,
+    "after": [],
+    "condition": null
+  },
+  "start": "start",
+  "nodes": [
+    {
+      "id": "start",
+      "text": "부두에 앉은 사내가 당신을 올려다본다.\n\"한 잔만 주면, 형씨가 찾는 사람 얘기를 해 주지.\"",
+      "extraTexts": [],
+      "effects": [],
+      "choices": [
+        {
+          "id": "c_1xd99tv1n",
+          "text": "위스키를 건넨다",
+          "showIf": null,
+          "require": {
+            "type": "all",
+            "items": [
+              {
+                "type": "item",
+                "id": "whiskey",
+                "op": ">=",
+                "value": 1
+              }
+            ]
+          },
+          "branches": [
+            {
+              "id": "b_1xd9a8n1l",
+              "condition": null,
+              "outcomes": [
+                {
+                  "id": "o_1xd9y9j1m",
+                  "weight": 1,
+                  "text": "사내는 술을 들이켜고 속삭였다.\n\"그 사람은 등대에 갔어. 그리고 돌아오지 않았지.\"",
+                  "effects": [
+                    {
+                      "type": "item",
+                      "id": "whiskey",
+                      "value": -1
+                    },
+                    {
+                      "type": "stat",
+                      "stat": "sanity",
+                      "value": 5,
+                      "valueMax": null
+                    }
+                  ],
+                  "next": null
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c_1xd9ld31r",
+          "text": "총을 들이댄다",
+          "showIf": null,
+          "require": {
+            "type": "all",
+            "items": [
+              {
+                "type": "item",
+                "id": "pistol",
+                "op": ">=",
+                "value": 1
+              }
+            ]
+          },
+          "branches": [
+            {
+              "id": "b_1xd9uka1o",
+              "condition": null,
+              "outcomes": [
+                {
+                  "id": "o_1xd9voz1p",
+                  "weight": 7,
+                  "text": "사내는 겁에 질려 주머니에서 은빛 열쇠를 던지고 달아났다.",
+                  "effects": [
+                    {
+                      "type": "item",
+                      "id": "silver_key",
+                      "value": 1
+                    }
+                  ],
+                  "next": null
+                },
+                {
+                  "id": "o_1xd9z8s1q",
+                  "weight": 3,
+                  "text": "사내는 생각보다 빨랐다. 당신은 차가운 바다에 처박혔다.",
+                  "effects": [
+                    {
+                      "type": "stat",
+                      "stat": "hp",
+                      "value": -1,
+                      "valueMax": null
+                    },
+                    {
+                      "type": "stat",
+                      "stat": "sanity",
+                      "value": -3,
+                      "valueMax": null
+                    }
+                  ],
+                  "next": null
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c_1xd9slh1u",
+          "text": "무시한다",
+          "showIf": null,
+          "require": null,
+          "branches": [
+            {
+              "id": "b_1xd9xzv1s",
+              "condition": null,
+              "outcomes": [
+                {
+                  "id": "o_1xd9yja1t",
+                  "weight": 1,
+                  "text": "사내는 낄낄 웃었다. 웃음소리에 물기가 섞여 있었다.",
+                  "effects": [],
+                  "next": null
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

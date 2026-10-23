@@ -1,0 +1,142 @@
+{
+  "id": "lighthouse_keeper",
+  "title": "등대지기",
+  "notes": "예시: '등대에서 온 편지' 이후 사이에 1~3개의 다른 인카운터를 거쳐 등장 (3개째엔 강제). 편지를 간직했을 때만.",
+  "spawn": {
+    "mode": "random",
+    "weight": 10,
+    "repeatable": false,
+    "cooldown": 0,
+    "minTurn": null,
+    "maxTurn": null,
+    "fixedTurn": 1,
+    "after": [
+      {
+        "encounterId": "strange_letter",
+        "minGap": 1,
+        "maxGap": 3
+      }
+    ],
+    "condition": {
+      "type": "all",
+      "items": [
+        {
+          "type": "flag",
+          "id": "letter_kept",
+          "op": "==",
+          "value": 1
+        }
+      ]
+    }
+  },
+  "start": "start",
+  "nodes": [
+    {
+      "id": "start",
+      "text": "안개 속에서 비옷을 입은 사내가 다가온다.\n\"편지는 받으셨겠지요. 형님께서 마지막으로 본 것을 보여드리겠습니다.\"",
+      "extraTexts": [],
+      "effects": [],
+      "choices": [
+        {
+          "id": "c_1xd9hgx23",
+          "text": "따라간다",
+          "showIf": null,
+          "require": null,
+          "branches": [
+            {
+              "id": "b_1xd97rq21",
+              "condition": null,
+              "outcomes": [
+                {
+                  "id": "o_1xd9nob22",
+                  "weight": 1,
+                  "text": "사내는 말없이 앞장섰다. 등대의 불빛이 안개를 가르며 돈다.",
+                  "effects": [
+                    {
+                      "type": "queue",
+                      "encounterId": "lighthouse_top",
+                      "delay": 0
+                    }
+                  ],
+                  "next": null
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c_1xd9e7q27",
+          "text": "총을 겨누고 형에 대해 묻는다",
+          "showIf": null,
+          "require": {
+            "type": "all",
+            "items": [
+              {
+                "type": "item",
+                "id": "pistol",
+                "op": ">=",
+                "value": 1
+              }
+            ]
+          },
+          "branches": [
+            {
+              "id": "b_1xd9wbg24",
+              "condition": null,
+              "outcomes": [
+                {
+                  "id": "o_1xd9rew25",
+                  "weight": 2,
+                  "text": "사내는 웃었다. \"형님도 그렇게 물으셨지요.\" 그는 등대 열쇠를 떨어뜨리고 안개 속으로 사라졌다.",
+                  "effects": [
+                    {
+                      "type": "queue",
+                      "encounterId": "lighthouse_top",
+                      "delay": 2
+                    }
+                  ],
+                  "next": null
+                },
+                {
+                  "id": "o_1xd9cbu26",
+                  "weight": 1,
+                  "text": "사내의 손이 당신의 손목을 움켜쥐었다. 차갑고 미끄러운 손이었다.",
+                  "effects": [
+                    {
+                      "type": "stat",
+                      "stat": "hp",
+                      "value": -1,
+                      "valueMax": null
+                    }
+                  ],
+                  "next": null
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c_1xd9ote2a",
+          "text": "거절한다",
+          "showIf": null,
+          "require": null,
+          "branches": [
+            {
+              "id": "b_1xd9kis28",
+              "condition": null,
+              "outcomes": [
+                {
+                  "id": "o_1xd9ug329",
+                  "weight": 1,
+                  "text": "사내는 고개를 끄덕이고 안개 속으로 물러났다. 그날 밤, 등대의 불은 켜지지 않았다.",
+                  "effects": [],
+                  "next": null
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

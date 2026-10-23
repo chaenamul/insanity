@@ -1,0 +1,127 @@
+{
+  "id": "wet_footprints",
+  "title": "젖은 발자국",
+  "notes": "예시: 요구 조건(석유등) 선택지 → 있으면 초록, 없으면 빨강.",
+  "spawn": {
+    "mode": "random",
+    "weight": 10,
+    "repeatable": false,
+    "cooldown": 0,
+    "minTurn": null,
+    "maxTurn": null,
+    "fixedTurn": 1,
+    "after": [],
+    "condition": null
+  },
+  "start": "start",
+  "nodes": [
+    {
+      "id": "start",
+      "text": "골목 바닥에 젖은 발자국이 이어져 있다. 사람의 것이라기엔 발가락 사이가 너무 넓다.",
+      "extraTexts": [],
+      "effects": [],
+      "choices": [
+        {
+          "id": "c_1xd96zka",
+          "text": "석유등으로 발자국을 비춰 본다",
+          "showIf": null,
+          "require": {
+            "type": "all",
+            "items": [
+              {
+                "type": "item",
+                "id": "lantern",
+                "op": ">=",
+                "value": 1
+              }
+            ]
+          },
+          "branches": [
+            {
+              "id": "b_1xd9rys8",
+              "condition": null,
+              "outcomes": [
+                {
+                  "id": "o_1xd9ujy9",
+                  "weight": 1,
+                  "text": "불빛 아래에서 발자국은 분명한 물갈퀴 모양이었다. 그리고 그것은 *당신의 숙소 앞*에서 끝나 있었다.",
+                  "effects": [
+                    {
+                      "type": "stat",
+                      "stat": "sanity",
+                      "value": -4,
+                      "valueMax": null
+                    }
+                  ],
+                  "next": null
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c_1xd9xjze",
+          "text": "발자국을 따라간다",
+          "showIf": null,
+          "require": null,
+          "branches": [
+            {
+              "id": "b_1xd9yvjb",
+              "condition": null,
+              "outcomes": [
+                {
+                  "id": "o_1xd95wic",
+                  "weight": 1,
+                  "text": "발자국은 버려진 창고에서 끊겼다. 선반 위에 먼지 쌓인 위스키 한 병이 남아 있다.",
+                  "effects": [
+                    {
+                      "type": "item",
+                      "id": "whiskey",
+                      "value": 1
+                    }
+                  ],
+                  "next": null
+                },
+                {
+                  "id": "o_1xd98u5d",
+                  "weight": 1,
+                  "text": "발자국은 바다로 이어졌다. 파도 속에서 누군가 당신의 이름을 불렀다.",
+                  "effects": [
+                    {
+                      "type": "stat",
+                      "stat": "sanity",
+                      "value": -2,
+                      "valueMax": -6
+                    }
+                  ],
+                  "next": null
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c_1xd9i0nh",
+          "text": "못 본 척 지나간다",
+          "showIf": null,
+          "require": null,
+          "branches": [
+            {
+              "id": "b_1xd95n9f",
+              "condition": null,
+              "outcomes": [
+                {
+                  "id": "o_1xd9esng",
+                  "weight": 1,
+                  "text": "당신은 걸음을 재촉했다. 등 뒤에서 무언가 철벅이는 소리가 났지만, 돌아보지 않았다.",
+                  "effects": [],
+                  "next": null
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

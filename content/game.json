@@ -1,0 +1,129 @@
+{
+  "version": 1,
+  "meta": {
+    "title": "INSANITY",
+    "subtitle": "흑포(黑浦) 기행",
+    "intro": "1931년 겨울, 실종된 형이 보낸 마지막 편지를 따라 당신은 지도에도 없는 어촌 흑포에 도착했다.\n안개가 걷히지 않는 마을. 이곳 사람들은 바다를 등지고 기도한다."
+  },
+  "start": {
+    "hp": 3,
+    "maxHp": 3,
+    "sanity": 100,
+    "maxSanity": 100,
+    "items": [
+      {
+        "id": "pistol",
+        "count": 1
+      }
+    ],
+    "traits": []
+  },
+  "items": [
+    {
+      "id": "pistol",
+      "name": "권총",
+      "description": "형이 남긴 낡은 리볼버. 탄이 몇 발 남았는지 확실하지 않다."
+    },
+    {
+      "id": "lantern",
+      "name": "석유등",
+      "description": "안개 속에서도 꺼지지 않는 불빛."
+    },
+    {
+      "id": "whiskey",
+      "name": "위스키",
+      "description": "반쯤 남은 병. 누군가의 입을 열게 하거나, 당신의 떨림을 멈추게 한다."
+    },
+    {
+      "id": "silver_key",
+      "name": "은빛 열쇠",
+      "description": "차갑고 비린내가 나는 열쇠."
+    },
+    {
+      "id": "brother_diary",
+      "name": "형의 일기장",
+      "description": "마지막 몇 장은 알아볼 수 없는 문자로 채워져 있다."
+    }
+  ],
+  "traits": [
+    {
+      "id": "forbidden_lore",
+      "name": "금지된 지식",
+      "description": "알아서는 안 될 것을 알게 되었다."
+    },
+    {
+      "id": "iron_will",
+      "name": "강철 같은 의지",
+      "description": "쉽게 무너지지 않는다."
+    },
+    {
+      "id": "marked",
+      "name": "표식",
+      "description": "목덜미에 비늘 같은 반점이 돋았다."
+    }
+  ],
+  "flags": [
+    {
+      "id": "letter_kept",
+      "name": "편지를 간직함",
+      "description": "등대지기의 편지를 버리지 않았다",
+      "initial": 0
+    },
+    {
+      "id": "whispers_heard",
+      "name": "속삭임에 귀 기울인 횟수",
+      "description": "",
+      "initial": 0
+    }
+  ],
+  "endings": [
+    {
+      "id": "death",
+      "title": "죽음",
+      "text": "차가운 물이 당신을 삼켰다. 흑포의 바다는 아무 일도 없었다는 듯 출렁였다.",
+      "kind": "death"
+    },
+    {
+      "id": "madness",
+      "title": "광기",
+      "text": "당신은 웃고 있었다. 왜 웃는지는 더 이상 기억나지 않았다. 사람들은 당신을 바다 쪽 방에 가두었다.",
+      "kind": "madness"
+    },
+    {
+      "id": "exhausted",
+      "title": "정적",
+      "text": "더 이상 아무 일도 일어나지 않았다. (출현 가능한 인카운터가 없습니다 — 에디터에서 출현 조건을 확인하세요)",
+      "kind": "other"
+    },
+    {
+      "id": "sealed",
+      "title": "봉인",
+      "text": "흑포의 바다는 다시 침묵했다. 당신은 형을 찾지 못했지만, 더 많은 사람을 잃지도 않았다.",
+      "kind": "victory"
+    },
+    {
+      "id": "escaped",
+      "title": "탈출",
+      "text": "당신은 첫차를 타고 흑포를 떠났다. 하지만 밤마다, 어디에 있든, 파도 소리가 들린다.",
+      "kind": "victory"
+    },
+    {
+      "id": "deep_one",
+      "title": "귀향",
+      "text": "숨을 쉴 필요가 없다는 것을 깨달았다. 형이 당신을 반겼다. 이제야 집에 돌아온 것이다.",
+      "kind": "other"
+    }
+  ],
+  "encounterOrder": [
+    "prologue",
+    "wet_footprints",
+    "fog",
+    "old_bookshop",
+    "whispers",
+    "dock_man",
+    "strange_letter",
+    "lighthouse_keeper",
+    "lighthouse_top",
+    "finale"
+  ]
+}

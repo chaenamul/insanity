@@ -1,0 +1,101 @@
+{
+  "id": "prologue",
+  "title": "흑포 도착",
+  "notes": "예시: 1번째로 고정 등장하는 프롤로그. 랜덤 결과(확률 분기) 예시.",
+  "spawn": {
+    "mode": "fixed",
+    "weight": 10,
+    "repeatable": false,
+    "cooldown": 0,
+    "minTurn": null,
+    "maxTurn": null,
+    "fixedTurn": 1,
+    "after": [],
+    "condition": null
+  },
+  "start": "start",
+  "nodes": [
+    {
+      "id": "start",
+      "text": "버스는 당신을 마을 어귀에 내려놓고 서둘러 떠났다. 짠 내와 썩은 내가 섞인 안개가 발목을 감는다.\n길은 두 갈래다. 하나는 불 꺼진 여관으로, 하나는 바다로 이어진다.",
+      "extraTexts": [],
+      "effects": [],
+      "choices": [
+        {
+          "id": "c_1xd81xj3",
+          "text": "여관 문을 두드린다",
+          "showIf": null,
+          "require": null,
+          "branches": [
+            {
+              "id": "b_1xd86nn1",
+              "condition": null,
+              "outcomes": [
+                {
+                  "id": "o_1xd8aox2",
+                  "weight": 1,
+                  "text": "한참 뒤에야 문이 열렸다. 눈이 지나치게 큰 주인이 아무 말 없이 석유등 하나를 건넸다.\n\"밤에는 바다 쪽으로 가지 마시오.\"",
+                  "effects": [
+                    {
+                      "type": "item",
+                      "id": "lantern",
+                      "value": 1
+                    }
+                  ],
+                  "next": null
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c_1xd9ewz7",
+          "text": "바다 쪽으로 걷는다",
+          "showIf": null,
+          "require": null,
+          "branches": [
+            {
+              "id": "b_1xd9qyn4",
+              "condition": null,
+              "outcomes": [
+                {
+                  "id": "o_1xd92145",
+                  "weight": 1,
+                  "text": "부두 끝에 형의 일기장이 젖은 채 놓여 있었다. 마치 누군가 당신이 오기를 기다린 것처럼.",
+                  "effects": [
+                    {
+                      "type": "item",
+                      "id": "brother_diary",
+                      "value": 1
+                    },
+                    {
+                      "type": "stat",
+                      "stat": "sanity",
+                      "value": -3,
+                      "valueMax": null
+                    }
+                  ],
+                  "next": null
+                },
+                {
+                  "id": "o_1xd9r2p6",
+                  "weight": 1,
+                  "text": "안개 속에서 무언가가 당신과 나란히 걷고 있었다. 돌아보았을 때는 아무것도 없었다.",
+                  "effects": [
+                    {
+                      "type": "stat",
+                      "stat": "sanity",
+                      "value": -3,
+                      "valueMax": -8
+                    }
+                  ],
+                  "next": null
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

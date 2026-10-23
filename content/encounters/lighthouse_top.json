@@ -1,0 +1,178 @@
+{
+  "id": "lighthouse_top",
+  "title": "등대 꼭대기",
+  "notes": "예시: 후속 전용. '등대지기'의 결과 효과(인카운터 예약)로만 등장. 진입 효과, 여러 페이지.",
+  "spawn": {
+    "mode": "triggered",
+    "weight": 10,
+    "repeatable": false,
+    "cooldown": 0,
+    "minTurn": null,
+    "maxTurn": null,
+    "fixedTurn": 1,
+    "after": [],
+    "condition": null
+  },
+  "start": "start",
+  "nodes": [
+    {
+      "id": "start",
+      "text": "나선 계단 끝, 거대한 렌즈가 천천히 돌고 있다. 렌즈 너머로 바다가 보인다. 아니, *바다 밑*이 보인다.",
+      "extraTexts": [],
+      "effects": [
+        {
+          "type": "stat",
+          "stat": "sanity",
+          "value": -2,
+          "valueMax": null
+        }
+      ],
+      "choices": [
+        {
+          "id": "c_1xdaeb12d",
+          "text": "렌즈를 들여다본다",
+          "showIf": null,
+          "require": null,
+          "branches": [
+            {
+              "id": "b_1xda2dv2b",
+              "condition": null,
+              "outcomes": [
+                {
+                  "id": "o_1xda7xe2c",
+                  "weight": 1,
+                  "text": "",
+                  "effects": [],
+                  "next": "vision"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c_1xda7pi2g",
+          "text": "형의 흔적을 찾는다",
+          "showIf": null,
+          "require": null,
+          "branches": [
+            {
+              "id": "b_1xdan6e2e",
+              "condition": null,
+              "outcomes": [
+                {
+                  "id": "o_1xdat5q2f",
+                  "weight": 1,
+                  "text": "벽에 형의 필체로 같은 문장이 수백 번 적혀 있다.\n'문을 잠가라. 문을 잠가라. 문을 잠가라.'",
+                  "effects": [
+                    {
+                      "type": "stat",
+                      "stat": "sanity",
+                      "value": -3,
+                      "valueMax": null
+                    }
+                  ],
+                  "next": null
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c_1xdacg32j",
+          "text": "내려간다",
+          "showIf": null,
+          "require": null,
+          "branches": [
+            {
+              "id": "b_1xdaxid2h",
+              "condition": null,
+              "outcomes": [
+                {
+                  "id": "o_1xdagp92i",
+                  "weight": 1,
+                  "text": "계단을 내려가는 내내 렌즈가 당신을 따라 돌았다.",
+                  "effects": [],
+                  "next": null
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "vision",
+      "text": "바다 밑에 도시가 있다. 기울어진 탑들 사이로 무언가가 눈을 뜬다. 그것이 당신을 본다.",
+      "extraTexts": [],
+      "effects": [
+        {
+          "type": "stat",
+          "stat": "maxSanity",
+          "value": -15,
+          "valueMax": null
+        },
+        {
+          "type": "stat",
+          "stat": "sanity",
+          "value": -5,
+          "valueMax": null
+        }
+      ],
+      "choices": [
+        {
+          "id": "c_1xdaxkc2m",
+          "text": "눈을 돌린다",
+          "showIf": null,
+          "require": null,
+          "branches": [
+            {
+              "id": "b_1xdajg42k",
+              "condition": null,
+              "outcomes": [
+                {
+                  "id": "o_1xdahj12l",
+                  "weight": 1,
+                  "text": "당신은 렌즈에서 떨어져 나왔다. 손이 멈추지 않고 떨린다.",
+                  "effects": [],
+                  "next": null
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c_1xdapvs2p",
+          "text": "끝까지 마주본다",
+          "showIf": null,
+          "require": null,
+          "branches": [
+            {
+              "id": "b_1xdajv62n",
+              "condition": null,
+              "outcomes": [
+                {
+                  "id": "o_1xda5sl2o",
+                  "weight": 1,
+                  "text": "그것의 이름이 당신의 머릿속에 새겨졌다. 목덜미가 가렵다.",
+                  "effects": [
+                    {
+                      "type": "trait",
+                      "id": "marked",
+                      "has": true
+                    },
+                    {
+                      "type": "trait",
+                      "id": "forbidden_lore",
+                      "has": true
+                    }
+                  ],
+                  "next": null
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

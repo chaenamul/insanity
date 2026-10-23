@@ -1,0 +1,208 @@
+{
+  "id": "old_bookshop",
+  "title": "곰팡내 나는 서점",
+  "notes": "예시: 여러 페이지, 최대 정신력 감소, 같은 선택지라도 능력에 따라 다른 결과(분기).",
+  "spawn": {
+    "mode": "random",
+    "weight": 10,
+    "repeatable": false,
+    "cooldown": 0,
+    "minTurn": 2,
+    "maxTurn": null,
+    "fixedTurn": 1,
+    "after": [],
+    "condition": null
+  },
+  "start": "start",
+  "nodes": [
+    {
+      "id": "start",
+      "text": "간판도 없는 서점. 노인은 졸고 있고, 계산대 위에 가죽 장정의 책 한 권이 펼쳐져 있다.",
+      "extraTexts": [],
+      "effects": [],
+      "choices": [
+        {
+          "id": "c_1xd9jwqu",
+          "text": "펼쳐진 책을 읽는다",
+          "showIf": null,
+          "require": null,
+          "branches": [
+            {
+              "id": "b_1xd9bj6s",
+              "condition": null,
+              "outcomes": [
+                {
+                  "id": "o_1xd9fbtt",
+                  "weight": 1,
+                  "text": "",
+                  "effects": [],
+                  "next": "reading"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c_1xd9r2qx",
+          "text": "노인에게 위스키를 건넨다",
+          "showIf": null,
+          "require": {
+            "type": "all",
+            "items": [
+              {
+                "type": "item",
+                "id": "whiskey",
+                "op": ">=",
+                "value": 1
+              }
+            ]
+          },
+          "branches": [
+            {
+              "id": "b_1xd9p1nv",
+              "condition": null,
+              "outcomes": [
+                {
+                  "id": "o_1xd9s3aw",
+                  "weight": 1,
+                  "text": "노인은 병을 단숨에 비우더니 서랍에서 은빛 열쇠를 꺼냈다.\n\"형씨도 이걸 찾았지.\"",
+                  "effects": [
+                    {
+                      "type": "item",
+                      "id": "whiskey",
+                      "value": -1
+                    },
+                    {
+                      "type": "item",
+                      "id": "silver_key",
+                      "value": 1
+                    }
+                  ],
+                  "next": null
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c_1xd98js10",
+          "text": "조용히 나간다",
+          "showIf": null,
+          "require": null,
+          "branches": [
+            {
+              "id": "b_1xd98uky",
+              "condition": null,
+              "outcomes": [
+                {
+                  "id": "o_1xd963sz",
+                  "weight": 1,
+                  "text": "문을 닫는 순간, 책장이 저절로 넘어가는 소리가 들렸다.",
+                  "effects": [],
+                  "next": null
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "reading",
+      "text": "문장은 한글도, 한문도 아니었지만 당신은 그것을 읽을 수 있었다. 읽어서는 안 된다는 것을 알면서도.",
+      "extraTexts": [],
+      "effects": [],
+      "choices": [
+        {
+          "id": "c_1xd94si13",
+          "text": "끝까지 읽는다",
+          "showIf": null,
+          "require": null,
+          "branches": [
+            {
+              "id": "b_1xd9n6p11",
+              "condition": null,
+              "outcomes": [
+                {
+                  "id": "o_1xd9i8e12",
+                  "weight": 1,
+                  "text": "당신은 바다 밑 도시의 이름을 알게 되었다. 그 이름을 아는 것만으로도 당신 안의 무언가가 영영 부서졌다.",
+                  "effects": [
+                    {
+                      "type": "stat",
+                      "stat": "maxSanity",
+                      "value": -10,
+                      "valueMax": null
+                    },
+                    {
+                      "type": "stat",
+                      "stat": "sanity",
+                      "value": -5,
+                      "valueMax": null
+                    },
+                    {
+                      "type": "trait",
+                      "id": "forbidden_lore",
+                      "has": true
+                    }
+                  ],
+                  "next": null
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c_1xd95kl18",
+          "text": "책을 덮는다",
+          "showIf": null,
+          "require": null,
+          "branches": [
+            {
+              "id": "b_1xd9dj914",
+              "condition": {
+                "type": "all",
+                "items": [
+                  {
+                    "type": "trait",
+                    "id": "iron_will",
+                    "has": true
+                  }
+                ]
+              },
+              "outcomes": [
+                {
+                  "id": "o_1xd9k5d15",
+                  "weight": 1,
+                  "text": "당신은 이를 악물고 책을 덮었다. 아무 일도 없었다.",
+                  "effects": [],
+                  "next": null
+                }
+              ]
+            },
+            {
+              "id": "b_1xd94mr16",
+              "condition": null,
+              "outcomes": [
+                {
+                  "id": "o_1xd967q17",
+                  "weight": 1,
+                  "text": "책을 덮었지만, 이미 읽은 문장이 눈꺼풀 안쪽에 남아 있다.",
+                  "effects": [
+                    {
+                      "type": "stat",
+                      "stat": "sanity",
+                      "value": -3,
+                      "valueMax": null
+                    }
+                  ],
+                  "next": null
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,83 @@
+{
+  "id": "strange_letter",
+  "title": "등대에서 온 편지",
+  "notes": "예시: 연쇄의 시작. 플래그로 다음 인카운터(등대지기)의 출현 여부를 결정.",
+  "spawn": {
+    "mode": "random",
+    "weight": 12,
+    "repeatable": false,
+    "cooldown": 0,
+    "minTurn": 2,
+    "maxTurn": 6,
+    "fixedTurn": 1,
+    "after": [],
+    "condition": null
+  },
+  "start": "start",
+  "nodes": [
+    {
+      "id": "start",
+      "text": "숙소 문틈에 젖은 편지가 끼워져 있다.\n'형님의 일로 드릴 말씀이 있습니다. ― 등대지기'",
+      "extraTexts": [],
+      "effects": [],
+      "choices": [
+        {
+          "id": "c_1xd9vaq1x",
+          "text": "편지를 간직한다",
+          "showIf": null,
+          "require": null,
+          "branches": [
+            {
+              "id": "b_1xd9m8o1v",
+              "condition": null,
+              "outcomes": [
+                {
+                  "id": "o_1xd9v2v1w",
+                  "weight": 1,
+                  "text": "편지를 주머니에 넣었다. 종이에서 바다 냄새가 났다.",
+                  "effects": [
+                    {
+                      "type": "flag",
+                      "id": "letter_kept",
+                      "mode": "set",
+                      "value": 1
+                    }
+                  ],
+                  "next": null
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c_1xd9bn120",
+          "text": "편지를 태운다",
+          "showIf": null,
+          "require": null,
+          "branches": [
+            {
+              "id": "b_1xd9nb01y",
+              "condition": null,
+              "outcomes": [
+                {
+                  "id": "o_1xd9prf1z",
+                  "weight": 1,
+                  "text": "불길 속에서 글씨가 꿈틀거리는 것 같았다.",
+                  "effects": [
+                    {
+                      "type": "stat",
+                      "stat": "sanity",
+                      "value": -2,
+                      "valueMax": null
+                    }
+                  ],
+                  "next": null
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

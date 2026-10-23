@@ -1,0 +1,135 @@
+{
+  "id": "fog",
+  "title": "짙은 안개",
+  "notes": "예시: 반복 가능한 채움용 인카운터. 랜덤 풀이 비면 '정적' 엔딩이 나오므로 이런 인카운터가 있으면 좋다.",
+  "spawn": {
+    "mode": "random",
+    "weight": 4,
+    "repeatable": true,
+    "cooldown": 0,
+    "minTurn": null,
+    "maxTurn": null,
+    "fixedTurn": 1,
+    "after": [],
+    "condition": null
+  },
+  "start": "start",
+  "nodes": [
+    {
+      "id": "start",
+      "text": "안개가 너무 짙어 한 치 앞도 보이지 않는다.",
+      "extraTexts": [],
+      "effects": [],
+      "choices": [
+        {
+          "id": "c_1xd91dvk",
+          "text": "석유등을 켜고 나아간다",
+          "showIf": null,
+          "require": {
+            "type": "all",
+            "items": [
+              {
+                "type": "item",
+                "id": "lantern",
+                "op": ">=",
+                "value": 1
+              }
+            ]
+          },
+          "branches": [
+            {
+              "id": "b_1xd98l8i",
+              "condition": null,
+              "outcomes": [
+                {
+                  "id": "o_1xd9n91j",
+                  "weight": 1,
+                  "text": "불빛이 안개를 밀어냈다. 당신은 무사히 숙소로 돌아왔다.",
+                  "effects": [
+                    {
+                      "type": "stat",
+                      "stat": "sanity",
+                      "value": 2,
+                      "valueMax": null
+                    }
+                  ],
+                  "next": null
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c_1xd9uoro",
+          "text": "벽을 짚으며 걷는다",
+          "showIf": null,
+          "require": null,
+          "branches": [
+            {
+              "id": "b_1xd9h1jl",
+              "condition": null,
+              "outcomes": [
+                {
+                  "id": "o_1xd91i8m",
+                  "weight": 3,
+                  "text": "축축한 벽이 손바닥 아래에서 숨을 쉬는 것 같았다.",
+                  "effects": [
+                    {
+                      "type": "stat",
+                      "stat": "sanity",
+                      "value": -1,
+                      "valueMax": -3
+                    }
+                  ],
+                  "next": null
+                },
+                {
+                  "id": "o_1xd9r6mn",
+                  "weight": 1,
+                  "text": "발을 헛디뎌 방파제 아래로 굴렀다.",
+                  "effects": [
+                    {
+                      "type": "stat",
+                      "stat": "hp",
+                      "value": -1,
+                      "valueMax": null
+                    }
+                  ],
+                  "next": null
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c_1xd9mznr",
+          "text": "안개가 걷히기를 기다린다",
+          "showIf": null,
+          "require": null,
+          "branches": [
+            {
+              "id": "b_1xd959wp",
+              "condition": null,
+              "outcomes": [
+                {
+                  "id": "o_1xd915jq",
+                  "weight": 1,
+                  "text": "얼마나 기다렸을까. 안개가 걷혔을 때, 당신은 처음 보는 거리에 서 있었다.",
+                  "effects": [
+                    {
+                      "type": "stat",
+                      "stat": "sanity",
+                      "value": -2,
+                      "valueMax": null
+                    }
+                  ],
+                  "next": null
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

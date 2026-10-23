@@ -1,0 +1,181 @@
+{
+  "id": "whispers",
+  "title": "벽 너머의 속삭임",
+  "notes": "예시: 능력이 있어야 보이는 숨은 선택지(표시 조건), 조건부 문단, 반복 등장.",
+  "spawn": {
+    "mode": "random",
+    "weight": 6,
+    "repeatable": true,
+    "cooldown": 3,
+    "minTurn": 3,
+    "maxTurn": null,
+    "fixedTurn": 1,
+    "after": [],
+    "condition": null
+  },
+  "start": "start",
+  "nodes": [
+    {
+      "id": "start",
+      "text": "불을 끄자 벽 너머에서 속삭임이 들려온다. 알아들을 수 없는 말인데, 묘하게 당신에게 하는 말 같다.",
+      "extraTexts": [
+        {
+          "id": "t_1xd9scb19",
+          "condition": {
+            "type": "all",
+            "items": [
+              {
+                "type": "trait",
+                "id": "forbidden_lore",
+                "has": true
+              }
+            ]
+          },
+          "text": "…아니, 당신은 알아들을 수 있다. 그들은 당신을 부르고 있다."
+        }
+      ],
+      "effects": [],
+      "choices": [
+        {
+          "id": "c_1xd9xis1e",
+          "text": "귀를 막고 버틴다",
+          "showIf": null,
+          "require": null,
+          "branches": [
+            {
+              "id": "b_1xd9tq71a",
+              "condition": {
+                "type": "all",
+                "items": [
+                  {
+                    "type": "trait",
+                    "id": "iron_will",
+                    "has": true
+                  }
+                ]
+              },
+              "outcomes": [
+                {
+                  "id": "o_1xd93p11b",
+                  "weight": 1,
+                  "text": "당신은 속삭임을 흘려보냈다.",
+                  "effects": [
+                    {
+                      "type": "stat",
+                      "stat": "sanity",
+                      "value": -1,
+                      "valueMax": null
+                    }
+                  ],
+                  "next": null
+                }
+              ]
+            },
+            {
+              "id": "b_1xd9oez1c",
+              "condition": null,
+              "outcomes": [
+                {
+                  "id": "o_1xd9i3h1d",
+                  "weight": 1,
+                  "text": "밤새 한숨도 잘 수 없었다.",
+                  "effects": [
+                    {
+                      "type": "stat",
+                      "stat": "sanity",
+                      "value": -2,
+                      "valueMax": -6
+                    }
+                  ],
+                  "next": null
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c_1xd9bal1h",
+          "text": "귀를 기울인다",
+          "showIf": null,
+          "require": null,
+          "branches": [
+            {
+              "id": "b_1xd90ot1f",
+              "condition": null,
+              "outcomes": [
+                {
+                  "id": "o_1xd9t481g",
+                  "weight": 1,
+                  "text": "속삭임은 점점 또렷해진다. 당신은 그것이 *당신 자신의 목소리*라는 것을 깨닫는다.",
+                  "effects": [
+                    {
+                      "type": "stat",
+                      "stat": "sanity",
+                      "value": -5,
+                      "valueMax": null
+                    },
+                    {
+                      "type": "stat",
+                      "stat": "maxSanity",
+                      "value": -3,
+                      "valueMax": null
+                    },
+                    {
+                      "type": "flag",
+                      "id": "whispers_heard",
+                      "mode": "add",
+                      "value": 1
+                    }
+                  ],
+                  "next": null
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c_1xd93tc1k",
+          "text": "책에서 읽은 말로 대답한다",
+          "showIf": {
+            "type": "all",
+            "items": [
+              {
+                "type": "trait",
+                "id": "forbidden_lore",
+                "has": true
+              }
+            ]
+          },
+          "require": null,
+          "branches": [
+            {
+              "id": "b_1xd9qr71i",
+              "condition": null,
+              "outcomes": [
+                {
+                  "id": "o_1xd9y331j",
+                  "weight": 1,
+                  "text": "당신이 그 말을 입에 담자 속삭임이 뚝 멎었다. 고요가 오히려 두렵다.",
+                  "effects": [
+                    {
+                      "type": "stat",
+                      "stat": "sanity",
+                      "value": 5,
+                      "valueMax": null
+                    },
+                    {
+                      "type": "trait",
+                      "id": "iron_will",
+                      "has": true
+                    }
+                  ],
+                  "next": null
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
