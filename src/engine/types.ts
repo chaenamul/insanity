@@ -84,8 +84,11 @@ export interface ConditionalText {
 /** 인카운터 안의 한 장면(페이지) */
 export interface EncounterNode {
   id: string;
+  /** 기본 본문. variants 중 조건을 만족하는 것이 없을 때 나온다 */
   text: string;
-  /** 조건을 만족하면 본문 뒤에 덧붙는 문단 */
+  /** 조건부 본문: 위에서부터 처음으로 조건을 만족한 것이 기본 본문 대신 나온다 */
+  variants: ConditionalText[];
+  /** 추가 문단: 조건을 만족하면 본문 뒤에 덧붙는다 (만족하는 것 모두) */
   extraTexts: ConditionalText[];
   /** 이 페이지에 들어설 때 적용되는 효과 */
   effects: Effect[];

@@ -1,0 +1,123 @@
+/* 글자 효과 (registry.tsx의 태그와 짝). 게임과 에디터 미리보기에서 함께 쓴다. */
+
+/* ── 색 ── */
+.fx-color--blood {
+  color: #c4423b;
+}
+.fx-color--abyss {
+  color: #5fbf9a;
+  text-shadow: 0 0 8px rgba(95, 191, 154, 0.35);
+}
+.fx-color--void {
+  color: #a77fd6;
+}
+.fx-color--pale {
+  color: #e9e6dc;
+  opacity: 0.85;
+}
+.fx-color--gold {
+  color: #c9a85c;
+}
+
+/* ── 희미하게 ── */
+.fx-faint {
+  opacity: 0.5;
+  letter-spacing: 0.04em;
+  text-shadow: 0 0 6px currentColor;
+}
+
+/* ── 떨림: 평소엔 가만히 있다가 가끔 글자마다 다른 방향으로 부르르 ── */
+.fx-word {
+  white-space: nowrap;
+}
+.fx-shake {
+  --fx-period: 3.6s;
+  --fx-amp: 1px;
+}
+.fx-shake--strong {
+  --fx-period: 2.2s;
+  --fx-amp: 2px;
+}
+.fx-shake-ch {
+  display: inline-block;
+  animation: fx-tremble-a var(--fx-period) linear infinite;
+  animation-delay: var(--fx-delay, 0s);
+}
+.fx-shake-ch:nth-child(3n + 1) {
+  animation-name: fx-tremble-b;
+}
+.fx-shake-ch:nth-child(3n + 2) {
+  animation-name: fx-tremble-c;
+}
+@keyframes fx-tremble-a {
+  0%,
+  84%,
+  100% {
+    transform: none;
+  }
+  86% {
+    transform: translate(var(--fx-amp), calc(var(--fx-amp) * -1));
+  }
+  88% {
+    transform: translate(calc(var(--fx-amp) * -1), var(--fx-amp)) rotate(-2deg);
+  }
+  90% {
+    transform: translate(var(--fx-amp), 0);
+  }
+  92% {
+    transform: translate(0, calc(var(--fx-amp) * -1)) rotate(1.5deg);
+  }
+  94% {
+    transform: translate(calc(var(--fx-amp) * -1), 0);
+  }
+}
+@keyframes fx-tremble-b {
+  0%,
+  84%,
+  100% {
+    transform: none;
+  }
+  86% {
+    transform: translate(calc(var(--fx-amp) * -1), 0) rotate(2deg);
+  }
+  88% {
+    transform: translate(var(--fx-amp), var(--fx-amp));
+  }
+  90% {
+    transform: translate(0, calc(var(--fx-amp) * -1)) rotate(-1.5deg);
+  }
+  92% {
+    transform: translate(calc(var(--fx-amp) * -1), var(--fx-amp));
+  }
+  94% {
+    transform: translate(var(--fx-amp), 0);
+  }
+}
+@keyframes fx-tremble-c {
+  0%,
+  84%,
+  100% {
+    transform: none;
+  }
+  86% {
+    transform: translate(0, var(--fx-amp));
+  }
+  88% {
+    transform: translate(var(--fx-amp), calc(var(--fx-amp) * -1)) rotate(1deg);
+  }
+  90% {
+    transform: translate(calc(var(--fx-amp) * -1), 0);
+  }
+  92% {
+    transform: translate(var(--fx-amp), var(--fx-amp)) rotate(-2deg);
+  }
+  94% {
+    transform: translate(0, calc(var(--fx-amp) * -1));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fx-shake-ch {
+    animation: none;
+  }
+}

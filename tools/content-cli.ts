@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { joinContent, normalizeContent, splitContent } from '../src/engine/content';
 import { validateContent } from '../src/engine/validate';
+import { EFFECT_TAGS } from '../src/markup/registry';
 import { readContentFiles, writeContentFiles } from './content-files';
 
 // npm run content                         content/ 파일을 표준 형식으로 정리(빠진 필드/id 채움)하고 검증 결과 출력
@@ -31,7 +32,7 @@ if (!checkOnly) {
   console.log(`정리 완료: ${written}개 파일 갱신, ${removed}개 삭제`);
 }
 
-const issues = validateContent(content);
+const issues = validateContent(content, { markupTags: EFFECT_TAGS });
 const errors = issues.filter((i) => i.severity === 'error');
 for (const i of issues) {
   const where = [i.encounterId, i.where].filter(Boolean).join(' › ');

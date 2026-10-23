@@ -144,7 +144,7 @@ function normalizeChoice(raw: unknown): Choice {
   };
 }
 
-function normalizeExtraText(raw: unknown): ConditionalText {
+function normalizeConditionalText(raw: unknown): ConditionalText {
   const r = obj(raw);
   return { id: str(r.id) || uid('t'), condition: normalizeCondition(r.condition), text: str(r.text) };
 }
@@ -154,7 +154,8 @@ function normalizeNode(raw: unknown, fallbackId: string): EncounterNode {
   return {
     id: str(r.id) || fallbackId,
     text: str(r.text),
-    extraTexts: arr(r.extraTexts).map(normalizeExtraText),
+    variants: arr(r.variants).map(normalizeConditionalText),
+    extraTexts: arr(r.extraTexts).map(normalizeConditionalText),
     effects: effects(r.effects),
     choices: arr(r.choices).map(normalizeChoice),
   };
@@ -300,6 +301,10 @@ export function createEncounter(id: string, title: string): Encounter {
     title,
     nodes: [{ id: 'start', text: '', choices: [createChoice()] }],
   });
+}
+
+export function createNode(id: string): EncounterNode {
+  return { id, text: '', variants: [], extraTexts: [], effects: [], choices: [createChoice()] };
 }
 
 export function createChoice(text = ''): Choice {

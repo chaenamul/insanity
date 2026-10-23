@@ -32,8 +32,12 @@ export function HelpPanel() {
           </dd>
           <dt>확률 결과</dt>
           <dd>한 분기 안에 결과를 여러 개 두면 가중치에 따라 무작위로 하나가 나옵니다.</dd>
-          <dt>조건부 문단</dt>
-          <dd>조건을 만족하면 페이지 본문 뒤에 덧붙는 서술. 같은 장면에 살을 붙일 때 사용.</dd>
+          <dt>조건부 본문</dt>
+          <dd>
+            능력/아이템/수치 등에 따라 본문 자체가 바뀝니다. 여러 개를 둘 수 있고, 위에서부터 처음 조건이 맞는 것 하나가 기본 본문 대신 나옵니다.
+          </dd>
+          <dt>추가 문단</dt>
+          <dd>조건을 만족하면 본문 뒤에 덧붙는 서술 (만족하는 것 모두). 같은 장면에 살을 붙일 때 사용.</dd>
         </dl>
       </section>
 
@@ -77,6 +81,31 @@ export function HelpPanel() {
           다음 인카운터 선택 우선순위: <b>예약</b> → <b>고정 순번</b> → <b>강제(최대 간격 도달)</b> → <b>랜덤</b>. 출현 가능한 게 하나도 없으면 "정적"
           엔딩이 나오므로, 반복 가능한 채움용 인카운터를 몇 개 두는 것을 권장합니다.
         </p>
+      </section>
+
+      <section className="card">
+        <h3 className="card-title">글자 서식과 효과</h3>
+        <p>
+          본문·선택지·결과 입력칸을 누르면 위에 서식 도구가 뜹니다. 글자를 선택하고 누르면 감싸지고, 아래에 미리보기가 보입니다.
+        </p>
+        <ul>
+          <li>
+            <code>**굵게**</code> <code>*기울임*</code>
+          </li>
+          <li>
+            <code>[color=blood]핏빛[/color]</code> — blood / abyss / void / pale / gold, 또는 <code>[color=#88ccaa]</code>
+          </li>
+          <li>
+            <code>[faint]희미하게[/faint]</code>
+          </li>
+          <li>
+            <code>[shake]부르르[/shake]</code>, <code>[shake=strong]강하게[/shake]</code> — 가끔 글자가 떨림
+          </li>
+          <li>
+            서식은 한 문단(줄) 안에서만 적용됩니다. 여러 줄을 선택하고 누르면 줄마다 따로 감쌉니다. 기호를 그대로 쓰려면 <code>\[</code>, <code>\*</code>.
+          </li>
+          <li>새 효과는 코드의 <code>src/markup/registry.tsx</code>에 항목을 추가하면 도구 모음과 게임에 자동으로 반영됩니다.</li>
+        </ul>
       </section>
 
       <section className="card">

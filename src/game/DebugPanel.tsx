@@ -19,9 +19,10 @@ interface Props {
   state: RunState;
   setState: Dispatch<SetStateAction<RunState | null>>;
   onNewRun: (seed?: number, startEncounterId?: string) => void;
+  onClose: () => void;
 }
 
-export function DebugPanel({ content, state, setState, onNewRun }: Props) {
+export function DebugPanel({ content, state, setState, onNewRun, onClose }: Props) {
   const [tab, setTab] = useState<'state' | 'spawn'>('spawn');
   const [addItem, setAddItem] = useState('');
   const patch = (fn: (draft: RunState) => void) => setState((s) => (s ? debugPatch(s, fn) : s));
@@ -36,6 +37,9 @@ export function DebugPanel({ content, state, setState, onNewRun }: Props) {
           </button>
           <button className={tab === 'state' ? 'active' : ''} onClick={() => setTab('state')}>
             상태
+          </button>
+          <button className="debug-close" aria-label="디버그 패널 닫기" onClick={onClose}>
+            ✕
           </button>
         </div>
         <div className="debug-meta">

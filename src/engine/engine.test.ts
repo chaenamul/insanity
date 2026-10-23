@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { joinContent, normalizeContent } from './content';
 import { conditionTags } from './describe';
 import { checkAvailability, selectNextEncounter } from './scheduler';
-import { choose, createInitialState, getView, newRun, proceed } from './run';
+import { choose, createInitialState, debugStartEncounter, getView, newRun, proceed } from './run';
 import { simulate } from './simulate';
 import type { GameContent, RunState } from './types';
 import { validateContent } from './validate';
@@ -159,6 +159,30 @@ describe('선택지', () => {
     const wise = choose(c, { ...s, traits: ['lore'] }, 'approach');
     expect(wise.current!.nodeId).toBe('deep');
     expect(wise.current!.phase).toBe('choose');
+  });
+
+  it('조건부 본문은 처음 맞는 것이 기본 본문을 대신하고, 추가 문단은 덧붙는다', () => {
+    const c2 = content([
+      {
+        id: 'a',
+        nodes: [
+          {
+            text: '기본',
+            variants: [
+              { condition: [{ type: 'trait', id: 'lore' }], text: '지식' },
+              { condition: [{ type: 'item', id: 'gun' }], text: '총' },
+            ],
+            extraTexts: [{ condition: [{ type: 'item', id: 'gun' }], text: '덧붙임' }],
+          },
+        ],
+      },
+    ]);
+    const texts = (s: RunState) => s.current!.log.map((l) => l.text);
+    const base = createInitialState(c2, 1);
+    const start = (patch: Partial<RunState>) => texts(debugStartEncounter(c2, { ...base, ...patch }, 'a'));
+    expect(start({})).toEqual(['기본']);
+    expect(start({ items: { gun: 1 } })).toEqual(['총', '덧붙임']);
+    expect(start({ items: { gun: 1 }, traits: ['lore'] })).toEqual(['지식', '덧붙임']);
   });
 
   it('any 그룹 요구 조건은 태그 하나로 묶인다', () => {

@@ -6,7 +6,8 @@ import { findReferences, refsOfCondition, refsOfEffect, renameReferences, walkCo
 import { useEditor } from '../state';
 import { IdInput } from './IdInput';
 import { RefSelect } from './RefSelect';
-import { Field, IconButton, NumberInput, TextArea } from './ui';
+import { RichTextArea } from './RichTextArea';
+import { Field, IconButton, NumberInput } from './ui';
 
 /** 종류:id → 참조 위치 목록 */
 function collectReferences(content: GameContent): Map<string, Loc[]> {
@@ -229,7 +230,7 @@ export function EndingsPanel() {
               )}
             </div>
             {builtin && <p className="help">{BUILTIN_HELP[e.id]}</p>}
-            <TextArea value={e.text} placeholder="엔딩 서술" onChange={(v) => update((d) => void (d.endings[i].text = v), `ending:${i}:text`)} />
+            <RichTextArea value={e.text} placeholder="엔딩 서술" onChange={(v) => update((d) => void (d.endings[i].text = v), `ending:${i}:text`)} />
           </section>
         );
       })}
@@ -263,7 +264,7 @@ export function SettingsPanel() {
           </Field>
         </div>
         <Field label="도입부" hint="타이틀 화면에 표시">
-          <TextArea value={content.meta.intro} onChange={(v) => update((d) => void (d.meta.intro = v), 'meta:intro')} />
+          <RichTextArea value={content.meta.intro} onChange={(v) => update((d) => void (d.meta.intro = v), 'meta:intro')} />
         </Field>
       </section>
 

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { joinContent, normalizeContent, splitContent } from '../engine/content';
 import type { GameContent } from '../engine/types';
 import { validateContent } from '../engine/validate';
+import { EFFECT_TAGS } from '../markup/registry';
 import { readStorage, STORAGE_KEYS, writeStorage } from '../shared/storage';
 import { DefinitionsPanel, EndingsPanel, IssuesPanel, SettingsPanel } from './components/DefinitionsPanel';
 import { EncounterEditor } from './components/EncounterEditor';
@@ -88,7 +89,7 @@ function Editor({ initial, server }: { initial: GameContent; server: boolean }) 
   const playtestOpened = useRef(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
-  const issues = useMemo(() => validateContent(content), [content]);
+  const issues = useMemo(() => validateContent(content, { markupTags: EFFECT_TAGS }), [content]);
   const errorCount = issues.filter((i) => i.severity === 'error').length;
   const dirty = content !== saved;
 

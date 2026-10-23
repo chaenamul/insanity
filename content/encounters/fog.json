@@ -18,6 +18,7 @@
     {
       "id": "start",
       "text": "안개가 너무 짙어 한 치 앞도 보이지 않는다.",
+      "variants": [],
       "extraTexts": [],
       "effects": [],
       "choices": [

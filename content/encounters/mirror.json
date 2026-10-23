@@ -1,0 +1,207 @@
+{
+  "id": "mirror",
+  "title": "금 간 거울",
+  "notes": "예시: 글자 효과([shake] 떨림, [color] 색, [faint] 희미하게)와 조건부 본문(능력/정신력에 따라 본문 자체가 바뀜) + 추가 문단.",
+  "spawn": {
+    "mode": "random",
+    "weight": 9,
+    "repeatable": false,
+    "cooldown": 0,
+    "minTurn": 2,
+    "maxTurn": null,
+    "fixedTurn": 1,
+    "after": [],
+    "condition": null
+  },
+  "start": "start",
+  "nodes": [
+    {
+      "id": "start",
+      "text": "여관 복도 끝에 금 간 거울이 걸려 있다.\n거울 속의 당신이 [shake]아주 잠깐[/shake] 늦게 움직인 것 같다.",
+      "variants": [
+        {
+          "id": "t_7dt9gfd1",
+          "condition": {
+            "type": "all",
+            "items": [
+              {
+                "type": "trait",
+                "id": "marked",
+                "has": true
+              }
+            ]
+          },
+          "text": "여관 복도 끝, 금 간 거울 속에서 당신의 목덜미에 돋은 [color=abyss]비늘[/color]이 반짝인다.\n당신은 그것이 [shake]아름답다[/shake]고 생각하고 만다."
+        },
+        {
+          "id": "t_7dt92dj2",
+          "condition": {
+            "type": "all",
+            "items": [
+              {
+                "type": "stat",
+                "stat": "sanity",
+                "op": "<",
+                "value": 50
+              }
+            ]
+          },
+          "text": "여관 복도 끝에 금 간 거울이 걸려 있다.\n거울 속에서 [shake=strong]당신이 아닌 누군가[/shake]가 당신을 따라 웃고 있다. 당신은 웃고 있지 않은데."
+        }
+      ],
+      "extraTexts": [
+        {
+          "id": "t_7dt9xfs3",
+          "condition": {
+            "type": "all",
+            "items": [
+              {
+                "type": "trait",
+                "id": "forbidden_lore",
+                "has": true
+              }
+            ]
+          },
+          "text": "[faint]거울 뒤에서 누군가 그 이름을 속삭인다.[/faint]"
+        }
+      ],
+      "effects": [],
+      "choices": [
+        {
+          "id": "c_7dt9pot7",
+          "text": "거울을 [shake]들여다본다[/shake]",
+          "showIf": null,
+          "require": null,
+          "branches": [
+            {
+              "id": "b_7dt9pjf4",
+              "condition": null,
+              "outcomes": [
+                {
+                  "id": "o_7dt91x25",
+                  "weight": 2,
+                  "text": "거울 속 당신이 입을 열었다. [shake=strong]소리는 나지 않았다.[/shake]",
+                  "effects": [
+                    {
+                      "type": "stat",
+                      "stat": "sanity",
+                      "value": -2,
+                      "valueMax": -5
+                    }
+                  ],
+                  "next": null
+                },
+                {
+                  "id": "o_7dt96vh6",
+                  "weight": 1,
+                  "text": "아무 일도 없었다. *아직은.*",
+                  "effects": [],
+                  "next": null
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c_7dt9n6da",
+          "text": "형의 일기장을 거울에 비춰 본다",
+          "showIf": null,
+          "require": {
+            "type": "all",
+            "items": [
+              {
+                "type": "item",
+                "id": "brother_diary",
+                "op": ">=",
+                "value": 1
+              }
+            ]
+          },
+          "branches": [
+            {
+              "id": "b_7dt9xcm8",
+              "condition": null,
+              "outcomes": [
+                {
+                  "id": "o_7dt9d889",
+                  "weight": 1,
+                  "text": "알아볼 수 없던 문자가 거울 속에서는 [color=blood]똑바로[/color] 읽힌다.\n'[shake]문을 잠가라.[/shake]'",
+                  "effects": [
+                    {
+                      "type": "stat",
+                      "stat": "sanity",
+                      "value": -3,
+                      "valueMax": null
+                    },
+                    {
+                      "type": "trait",
+                      "id": "forbidden_lore",
+                      "has": true
+                    }
+                  ],
+                  "next": null
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c_7dt936wf",
+          "text": "거울을 깨뜨린다",
+          "showIf": null,
+          "require": null,
+          "branches": [
+            {
+              "id": "b_7dt98l9b",
+              "condition": {
+                "type": "all",
+                "items": [
+                  {
+                    "type": "trait",
+                    "id": "iron_will",
+                    "has": true
+                  }
+                ]
+              },
+              "outcomes": [
+                {
+                  "id": "o_7dt953ec",
+                  "weight": 1,
+                  "text": "유리 조각이 쏟아졌다. 조각마다 다른 얼굴이 비쳤지만, 당신은 눈을 돌렸다.",
+                  "effects": [],
+                  "next": null
+                }
+              ]
+            },
+            {
+              "id": "b_7dt9ozqd",
+              "condition": null,
+              "outcomes": [
+                {
+                  "id": "o_7dt9wcee",
+                  "weight": 1,
+                  "text": "유리 조각마다 [shake]다른 얼굴[/shake]이 비친다. 그중 하나가 당신에게 손을 흔든다.",
+                  "effects": [
+                    {
+                      "type": "stat",
+                      "stat": "hp",
+                      "value": -1,
+                      "valueMax": null
+                    },
+                    {
+                      "type": "stat",
+                      "stat": "maxSanity",
+                      "value": -3,
+                      "valueMax": null
+                    }
+                  ],
+                  "next": null
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

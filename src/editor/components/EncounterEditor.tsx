@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { createChoice, ID_PATTERN, makeUniqueId } from '../../engine/content';
+import { createNode, ID_PATTERN, makeUniqueId } from '../../engine/content';
 import { describeSpawn } from '../../engine/describe';
 import type { Encounter } from '../../engine/types';
 import { findReferences, renameReferences } from '../../engine/walk';
@@ -66,7 +66,7 @@ export function EncounterEditor({ enc }: { enc: Encounter }) {
     let i = enc.nodes.length + 1;
     while (taken.has(`p${i}`)) i++;
     const id = `p${i}`;
-    edit((e) => void e.nodes.push({ id, text: '', extraTexts: [], effects: [], choices: [createChoice()] }));
+    edit((e) => void e.nodes.push(createNode(id)));
     return id;
   };
 

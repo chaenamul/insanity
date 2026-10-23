@@ -6,7 +6,9 @@ import { child, useEditor, type Edit } from '../state';
 import { ConditionEditor } from './ConditionEditor';
 import { EffectsEditor } from './EffectsEditor';
 import { IdInput } from './IdInput';
-import { IconButton, move, NumberInput, TextArea } from './ui';
+import { RichInline, stripMarkup } from '../../markup/render';
+import { RichTextArea } from './RichTextArea';
+import { IconButton, move, NumberInput } from './ui';
 
 interface PageOps {
   enc: Encounter;
@@ -50,9 +52,9 @@ function OutcomeEditor({
           </IconButton>
         </div>
       )}
-      <TextArea
+      <RichTextArea
         value={outcome.text}
-        placeholder="결과 서술 (비워도 됨). 줄바꿈 = 문단, *기울임*, **굵게**"
+        placeholder="결과 서술 (비워도 됨). 줄바꿈 = 문단"
         onChange={(v) => edit((o) => void (o.text = v), `text:${outcome.id}`)}
       />
       <EffectsEditor value={outcome.effects} encounterId={ops.enc.id} onChange={(effects) => edit((o) => void (o.effects = effects))} />
@@ -194,11 +196,12 @@ function ChoiceEditor({
     <div className="choice-card">
       <div className="choice-head">
         <span className="choice-index">{index + 1}</span>
-        <input
+        <RichTextArea
+          singleLine
           className="choice-text-input"
           value={choice.text}
           placeholder="선택지 문구"
-          onChange={(e) => edit((c) => void (c.text = e.target.value), `ctext:${choice.id}`)}
+          onChange={(v) => edit((c) => void (c.text = v), `ctext:${choice.id}`)}
         />
         <IconButton title="위로" onClick={() => onMove(-1)} disabled={index === 0}>
           ↑
@@ -220,7 +223,7 @@ function ChoiceEditor({
             [{t.label}]
           </span>
         ))}
-        <span>{choice.text || <span className="muted">(문구 없음)</span>}</span>
+        <span>{choice.text ? <RichInline text={choice.text} /> : <span className="muted">(문구 없음)</span>}</span>
       </div>
 
       <div className="choice-conds">
@@ -284,6 +287,7 @@ export function NodeEditor({
   collapsed: boolean;
   onToggle: () => void;
 }) {
+  const { content } = useEditor();
   const isStart = ops.enc.start === node.id;
 
   const rename = (to: string): string | null => {
@@ -331,27 +335,68 @@ export function NodeEditor({
         </IconButton>
       </div>
       {collapsed ? (
-        <p className="collapsed-preview muted">{node.text.slice(0, 80) || '(본문 없음)'}</p>
+        <p className="collapsed-preview muted">{stripMarkup(node.text).slice(0, 80) || '(본문 없음)'}</p>
       ) : (
         <>
-          <TextArea
-            className="node-text"
-            minRows={3}
-            value={node.text}
-            placeholder="본문. 줄바꿈 = 문단, *기울임*, **굵게**"
-            onChange={(v) => edit((n) => void (n.text = v), `ntext:${node.id}`)}
-          />
+          {node.variants.map((v, i) => (
+            <div key={v.id} className="text-block variant">
+              <div className="text-block-head">
+                <span className="cond-title" title="조건을 만족하면 기본 본문 대신 이 본문이 나옵니다. 위에서부터 처음 맞는 것 하나만.">
+                  조건부 본문 {i + 1}
+                </span>
+                <ConditionEditor
+                  value={v.condition}
+                  onChange={(c) => edit((n) => void (n.variants[i].condition = c))}
+                  emptyLabel="조건 없음 — 항상 이 본문이 나옵니다"
+                />
+                <span className="branch-tools">
+                  <IconButton title="위로" onClick={() => edit((n) => move(n.variants, i, -1))} disabled={i === 0}>
+                    ↑
+                  </IconButton>
+                  <IconButton title="아래로" onClick={() => edit((n) => move(n.variants, i, 1))} disabled={i === node.variants.length - 1}>
+                    ↓
+                  </IconButton>
+                  <IconButton title="삭제" danger onClick={() => edit((n) => void n.variants.splice(i, 1))}>
+                    ✕
+                  </IconButton>
+                </span>
+              </div>
+              <RichTextArea
+                className="node-text"
+                value={v.text}
+                placeholder="조건을 만족할 때 나올 본문"
+                onChange={(t) => edit((n) => void (n.variants[i].text = t), `variant:${v.id}`)}
+              />
+            </div>
+          ))}
+          <div className={node.variants.length ? 'text-block default' : ''}>
+            {node.variants.length > 0 && (
+              <div className="text-block-head">
+                <span className="cond-title">기본 본문</span>
+                <span className="help">위 조건에 모두 해당하지 않으면</span>
+              </div>
+            )}
+            <RichTextArea
+              className="node-text"
+              minRows={3}
+              value={node.text}
+              placeholder="본문. 줄바꿈 = 문단"
+              onChange={(v) => edit((n) => void (n.text = v), `ntext:${node.id}`)}
+            />
+          </div>
 
           {node.extraTexts.map((t, i) => (
-            <div key={t.id} className="extra-text">
-              <div className="extra-text-head">
-                <span className="cond-title">조건부 문단</span>
+            <div key={t.id} className="text-block extra">
+              <div className="text-block-head">
+                <span className="cond-title" title="조건을 만족하면 본문 뒤에 덧붙습니다 (만족하는 것 모두)">
+                  추가 문단 {i + 1}
+                </span>
                 <ConditionEditor value={t.condition} onChange={(c) => edit((n) => void (n.extraTexts[i].condition = c))} emptyLabel="항상 표시" />
                 <IconButton title="삭제" danger onClick={() => edit((n) => void n.extraTexts.splice(i, 1))}>
                   ✕
                 </IconButton>
               </div>
-              <TextArea
+              <RichTextArea
                 value={t.text}
                 placeholder="조건을 만족하면 본문 뒤에 덧붙는 문단"
                 onChange={(v) => edit((n) => void (n.extraTexts[i].text = v), `extra:${t.id}`)}
@@ -363,10 +408,26 @@ export function NodeEditor({
             <button
               type="button"
               className="link-btn"
-              title="특정 능력/아이템이 있을 때만 덧붙는 서술"
+              title="능력/아이템/수치 등에 따라 본문 자체를 바꿉니다 (여러 개 가능, 위에서부터 처음 맞는 것)"
+              onClick={() =>
+                edit((n) =>
+                  void n.variants.push({
+                    id: uid('t'),
+                    condition: { type: 'all', items: [{ type: 'trait', id: content.traits[0]?.id ?? '', has: true }] },
+                    text: n.text,
+                  }),
+                )
+              }
+            >
+              + 조건부 본문
+            </button>
+            <button
+              type="button"
+              className="link-btn"
+              title="조건을 만족하면 본문 뒤에 덧붙는 문단"
               onClick={() => edit((n) => void n.extraTexts.push({ id: uid('t'), condition: null, text: '' }))}
             >
-              + 조건부 문단
+              + 추가 문단
             </button>
             <div className="node-effects">
               <span className="cond-title" title="이 페이지에 들어서는 순간 적용">

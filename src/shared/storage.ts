@@ -12,6 +12,8 @@ export const STORAGE_KEYS = {
   playtestRun: 'insanity.playtest.run',
   /** 에디터 자동 백업 */
   editorDraft: 'insanity.editor.draft',
+  /** 게임 설정 (글꼴 크기 등) */
+  settings: 'insanity.settings',
 } as const;
 
 export function readStorage<T>(key: string): T | null {

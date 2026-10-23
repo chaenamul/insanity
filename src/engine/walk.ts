@@ -13,6 +13,8 @@ export interface Loc {
 export interface Visitor {
   /** 그룹 안의 조건까지 모두 방문 */
   condition?(c: Condition, loc: Loc): void;
+  /** 플레이어에게 보이는 글 (본문, 조건부 본문, 추가 문단, 선택지, 결과) */
+  text?(text: string, loc: Loc): void;
   effect?(e: Effect, loc: Loc): void;
   outcome?(o: Outcome, loc: Loc, enc: Encounter): void;
   prerequisite?(p: Prerequisite, loc: Loc): void;
@@ -31,10 +33,19 @@ export function walkEncounter(enc: Encounter, v: Visitor): void {
 
   for (const node of enc.nodes) {
     const nodeLoc = (where: string): Loc => ({ encounterId: enc.id, nodeId: node.id, where: `페이지 ${node.id}${where}` });
-    node.extraTexts.forEach((t, i) => walkCondition(t.condition, nodeLoc(` › 조건부 문단 ${i + 1}`), v));
+    v.text?.(node.text, nodeLoc(' › 본문'));
+    node.variants.forEach((t, i) => {
+      walkCondition(t.condition, nodeLoc(` › 조건부 본문 ${i + 1}`), v);
+      v.text?.(t.text, nodeLoc(` › 조건부 본문 ${i + 1}`));
+    });
+    node.extraTexts.forEach((t, i) => {
+      walkCondition(t.condition, nodeLoc(` › 추가 문단 ${i + 1}`), v);
+      v.text?.(t.text, nodeLoc(` › 추가 문단 ${i + 1}`));
+    });
     for (const e of node.effects) v.effect?.(e, nodeLoc(' › 진입 효과'));
     node.choices.forEach((choice, ci) => {
       const cw = ` › 선택지 ${ci + 1}`;
+      v.text?.(choice.text, nodeLoc(cw));
       walkCondition(choice.showIf, nodeLoc(`${cw} › 표시 조건`), v);
       walkCondition(choice.require, nodeLoc(`${cw} › 요구 조건`), v);
       choice.branches.forEach((branch, bi) => {
@@ -43,6 +54,7 @@ export function walkEncounter(enc: Encounter, v: Visitor): void {
         branch.outcomes.forEach((outcome, oi) => {
           const loc = nodeLoc(`${bw} › 결과 ${oi + 1}`);
           v.outcome?.(outcome, loc, enc);
+          v.text?.(outcome.text, loc);
           for (const e of outcome.effects) v.effect?.(e, loc);
         });
       });

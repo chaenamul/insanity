@@ -688,21 +688,35 @@ code {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.extra-text {
+.text-block {
   margin-top: 8px;
   padding: 8px;
-  border: 1px dashed var(--line-2);
   border-radius: 4px;
 }
-.extra-text-head {
+.text-block.variant {
+  border: 1px solid var(--line-2);
+  border-left: 3px solid var(--c-seen);
+  background: var(--bg-2);
+}
+.text-block.default {
+  border: 1px solid var(--line-2);
+  border-left: 3px solid var(--line-2);
+}
+.text-block.extra {
+  border: 1px dashed var(--line-2);
+}
+.text-block-head {
   display: flex;
   gap: 8px;
   align-items: flex-start;
   margin-bottom: 6px;
 }
-.extra-text-head .cond-empty,
-.extra-text-head .cond-group {
+.text-block-head .cond-empty,
+.text-block-head .cond-group {
   flex: 1;
+}
+.text-block-head > .help {
+  padding-top: 4px;
 }
 .cond-title {
   font-size: 12px;
@@ -760,8 +774,11 @@ code {
   font-size: 12px;
   flex-shrink: 0;
 }
-.choice-text-input {
+.choice-head .rich-field {
   flex: 1;
+}
+.choice-text-input {
+  width: 100%;
   font-weight: 600;
 }
 .choice-preview {
@@ -868,6 +885,82 @@ code {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+/* ── 서식 입력칸 ── */
+
+.rich-field {
+  position: relative;
+}
+.rich-toolbar {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: 0;
+  z-index: 6;
+  gap: 2px;
+  padding: 3px;
+  background: var(--panel-2);
+  border: 1px solid var(--line-2);
+  border-radius: 5px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+}
+.rich-field:focus-within .rich-toolbar {
+  display: flex;
+}
+.rich-toolbar button,
+.rich-toolbar select {
+  background: var(--bg);
+  border: 1px solid var(--line-2);
+  border-radius: 3px;
+  padding: 1px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  max-width: none;
+}
+.rich-toolbar button:hover,
+.rich-toolbar select:hover {
+  border-color: var(--accent);
+}
+.rich-toolbar select {
+  width: 76px;
+}
+.rich-toolbar .clear {
+  color: var(--muted);
+}
+/* 미리보기는 레이아웃을 밀어내지 않도록 겹쳐서 띄우고, 클릭은 아래로 통과시킨다
+   (포커스가 빠질 때 사라지면서 아래 버튼 클릭이 빗나가지 않게) */
+.rich-preview {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 6;
+  pointer-events: none;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
+  padding: 8px 12px;
+  background: #0b0d0c;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-family: 'Noto Serif KR', 'Nanum Myeongjo', serif;
+  font-size: 15px;
+  line-height: 1.75;
+  color: #d6d2c4;
+}
+.rich-field:focus-within .rich-preview {
+  display: block;
+}
+.rich-preview-label {
+  display: block;
+  font-family: -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+}
+.rich-preview-body p {
+  margin: 0 0 6px;
 }
 
 /* ── 조건 ── */

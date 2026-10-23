@@ -1,4 +1,5 @@
 import { isEmptyCondition } from './conditions';
+import { findMarkupProblems } from '../markup/parse';
 import { ID_PATTERN } from './content';
 import type { GameContent } from './types';
 import { refsOfCondition, refsOfEffect, walkEncounter, type RefKind } from './walk';
@@ -31,8 +32,15 @@ function duplicates(ids: string[]): string[] {
   return [...dup];
 }
 
-export function validateContent(content: GameContent): Issue[] {
+export interface ValidateOptions {
+  /** 본문 서식 태그 목록 (markup/registry의 EFFECT_TAGS). 주면 알 수 없는/닫히지 않은 서식도 검사한다 */
+  markupTags?: ReadonlySet<string>;
+}
+
+export function validateContent(content: GameContent, options: ValidateOptions = {}): Issue[] {
   const issues: Issue[] = [];
+  const markupTags = options.markupTags;
+  const markupProblems = (text: string) => (markupTags ? findMarkupProblems(text, (t) => markupTags.has(t)) : []);
   const known: Record<RefKind, Set<string>> = {
     item: new Set(content.items.map((i) => i.id)),
     trait: new Set(content.traits.map((t) => t.id)),
@@ -169,7 +177,14 @@ export function validateContent(content: GameContent): Issue[] {
     }
 
     for (const node of enc.nodes) {
-      if (node.id === enc.start && !node.text.trim()) at('시작 페이지 본문이 비어 있습니다', 'warning', node.id);
+      if (node.id === enc.start && !node.text.trim() && !node.variants.some((v) => v.text.trim())) {
+        at('시작 페이지 본문이 비어 있습니다', 'warning', node.id);
+      }
+      node.variants.forEach((v, i) => {
+        if (isEmptyCondition(v.condition)) {
+          at(`조건부 본문 ${i + 1}에 조건이 없어 항상 이 본문이 나옵니다 (아래 본문은 나오지 않음)`, 'warning', node.id, `페이지 ${node.id}`);
+        }
+      });
       node.choices.forEach((choice, ci) => {
         const where = `페이지 ${node.id} › 선택지 ${ci + 1}`;
         if (!choice.text.trim()) at('선택지 문구가 비어 있습니다', 'warning', node.id, where);
@@ -201,6 +216,9 @@ export function validateContent(content: GameContent): Issue[] {
         if (!r.id) at(`조건의 ${KIND_LABELS[r.kind]}가 선택되지 않았습니다`, 'error', loc.nodeId, loc.where);
         else if (!known[r.kind].has(r.id)) at(`조건이 없는 ${KIND_LABELS[r.kind]} '${r.id}'를 참조합니다`, 'error', loc.nodeId, loc.where);
       },
+      text(text, loc) {
+        for (const problem of markupProblems(text)) at(`서식 오류: ${problem}`, 'warning', loc.nodeId, loc.where);
+      },
       effect(e, loc) {
         const r = refsOfEffect(e);
         if (!r) return;
@@ -208,6 +226,15 @@ export function validateContent(content: GameContent): Issue[] {
         else if (!known[r.kind].has(r.id)) at(`효과가 없는 ${KIND_LABELS[r.kind]} '${r.id}'를 참조합니다`, 'error', loc.nodeId, loc.where);
       },
     });
+  }
+
+  for (const e of content.endings) {
+    for (const problem of markupProblems(e.text)) {
+      issues.push({ severity: 'warning', message: `엔딩 '${e.title || e.id}' 서식 오류: ${problem}`, tab: 'endings' });
+    }
+  }
+  for (const problem of markupProblems(content.meta.intro)) {
+    issues.push({ severity: 'warning', message: `도입부 서식 오류: ${problem}`, tab: 'settings' });
   }
 
   const hasEntry = content.encounters.some((e) => e.spawn.mode !== 'triggered');

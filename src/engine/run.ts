@@ -79,7 +79,8 @@ function enterNode(content: GameContent, state: RunState, enc: Encounter, nodeId
     cur.phase = 'continue';
     return;
   }
-  if (node.text.trim()) cur.log.push({ kind: 'text', text: node.text });
+  const body = node.variants.find((v) => evaluate(v.condition, state))?.text ?? node.text;
+  if (body.trim()) cur.log.push({ kind: 'text', text: body });
   for (const extra of node.extraTexts) {
     if (extra.text.trim() && evaluate(extra.condition, state)) cur.log.push({ kind: 'text', text: extra.text });
   }

@@ -18,6 +18,7 @@
     {
       "id": "start",
       "text": "부두에 앉은 사내가 당신을 올려다본다.\n\"한 잔만 주면, 형씨가 찾는 사람 얘기를 해 주지.\"",
+      "variants": [],
       "extraTexts": [],
       "effects": [],
       "choices": [
