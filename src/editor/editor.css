@@ -1323,3 +1323,47 @@ code {
     padding: 14px;
   }
 }
+
+/* ── 플랫폼 연동 (뒤로, 공개 상태) ── */
+
+.back-link {
+  font-size: 18px;
+  text-decoration: none;
+  color: var(--muted);
+  padding: 0 4px;
+}
+.back-link:hover {
+  color: var(--accent);
+}
+.story-status {
+  margin-left: 8px;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0;
+  padding: 1px 6px;
+  border: 1px solid var(--line-2);
+  border-radius: 3px;
+  color: var(--muted);
+}
+.story-status.live {
+  color: var(--accent);
+  border-color: var(--accent-dim);
+}
+.story-status.warn {
+  color: var(--warn);
+  border-color: #5c4a28;
+}
+.btn.publish:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.banner-list {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  font-size: 12px;
+}
+.loading a.btn {
+  display: inline-block;
+  margin-top: 12px;
+  text-decoration: none;
+}

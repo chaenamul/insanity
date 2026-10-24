@@ -2,8 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'r
 import { choose, getView, isStateCompatible, newRun, proceed } from '../engine/run';
 import type { GameContent, RunState } from '../engine/types';
 import { RichText } from '../markup/render';
-import { loadPlaytestContent, readStorage, STORAGE_KEYS, writeStorage } from '../shared/storage';
-import { loadBundledContent } from './bundledContent';
+import { loadPlaytestContent, STORAGE_KEYS } from '../shared/storage';
 import { DebugPanel } from './DebugPanel';
 import { EncounterView } from './EncounterView';
 import { EndingView } from './EndingView';
@@ -12,28 +11,27 @@ import { Dock, ItemList, signatures, TraitList, type SheetKind } from './Invento
 import { MenuDrawer } from './MenuDrawer';
 import { Sheet } from './Overlays';
 import { ScrollArea } from './ScrollArea';
+import type { RunSaver } from './saver';
 import { FONT_SIZES, useSettings } from './settings';
 
-interface SavedRun {
-  /** 테스트 플레이 토큰 (에디터에서 새로 열 때마다 바뀜) */
-  token: string | null;
-  state: RunState;
+interface Props {
+  initialContent: GameContent;
+  saver: RunSaver;
+  /** 서버에 저장된 진행 중인 판 (타이틀의 "이어하기") */
+  savedRun: RunState | null;
+  /** 바로 시작할 판 (테스트 플레이) */
+  initialRun: RunState | null;
+  isPlaytest: boolean;
 }
 
-export function GameApp() {
+export function GameApp({ initialContent, saver, savedRun, initialRun, isPlaytest }: Props) {
   const params = useMemo(() => new URLSearchParams(location.search), []);
-  const playtestToken = params.get('playtest');
-  const isPlaytest = playtestToken != null;
   const canDebug = isPlaytest || params.has('debug');
-  const runKey = isPlaytest ? STORAGE_KEYS.playtestRun : STORAGE_KEYS.run;
 
-  const [content, setContent] = useState<GameContent>(() => (isPlaytest && loadPlaytestContent()) || loadBundledContent());
-  const [run, setRun] = useState<RunState | null>(() => {
-    if (!isPlaytest) return null;
-    const saved = readStorage<SavedRun>(runKey);
-    if (saved && saved.token === playtestToken && isStateCompatible(content, saved.state)) return saved.state;
-    return newRun(content, { startEncounterId: params.get('start') ?? undefined });
-  });
+  const [content, setContent] = useState<GameContent>(initialContent);
+  const [run, setRun] = useState<RunState | null>(initialRun);
+  /** 마지막으로 저장한 진행 상태 (타이틀로 돌아갔을 때 이어하기용) */
+  const [lastSaved, setLastSaved] = useState<RunState | null>(savedRun);
   // 넓은 화면에서만 디버그 패널을 처음부터 열어 둔다 (모바일에서는 메뉴에서 열기)
   const [showDebug, setShowDebug] = useState(canDebug && window.innerWidth >= 1100);
   const [settings, updateSettings] = useSettings();
@@ -44,8 +42,10 @@ export function GameApp() {
   // 자동 저장. 엔딩에 도달하면 저장을 지운다 (영구 죽음)
   useEffect(() => {
     if (!run) return;
-    writeStorage(runKey, run.ending ? null : { token: playtestToken, state: run });
-  }, [run, runKey, playtestToken]);
+    const state = run.ending ? null : run;
+    saver.save(state);
+    setLastSaved(state);
+  }, [run, saver]);
 
   // 테스트 플레이 중 에디터에서 내용을 고치면 바로 반영
   useEffect(() => {
@@ -114,22 +114,24 @@ export function GameApp() {
   const style = { '--story-size': `${FONT_SIZES[settings.fontSize].px}px` } as CSSProperties;
 
   if (!run) {
-    const saved = isPlaytest ? null : readStorage<SavedRun>(runKey);
-    const savedRun = saved && !saved.state.ending && isStateCompatible(content, saved.state) ? saved.state : null;
+    const resumable = lastSaved && !lastSaved.ending && isStateCompatible(content, lastSaved) ? lastSaved : null;
     return (
       <div className="title-screen" style={style}>
+        <a className="title-back" href="/">
+          ← 이야기 목록
+        </a>
         <div className="title-card">
           <h1>{content.meta.title}</h1>
           {content.meta.subtitle && <p className="subtitle">{content.meta.subtitle}</p>}
           {content.meta.intro && <RichText className="intro" text={content.meta.intro} />}
           <div className="title-actions">
-            {savedRun && (
-              <button className="btn primary" onClick={() => setRun(savedRun)}>
+            {resumable && (
+              <button className="btn primary" onClick={() => setRun(resumable)}>
                 이어하기
               </button>
             )}
-            <button className={`btn ${savedRun ? '' : 'primary'}`} onClick={() => startNew()}>
-              {savedRun ? '새로 시작 (저장 삭제)' : '시작'}
+            <button className={`btn ${resumable ? '' : 'primary'}`} onClick={() => startNew()}>
+              {resumable ? '새로 시작 (저장 삭제)' : '시작'}
             </button>
           </div>
           <p className="title-note">죽으면 처음부터 다시 시작합니다. 매번 다른 일이 일어납니다.</p>

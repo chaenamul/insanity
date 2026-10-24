@@ -1,17 +1,63 @@
 # INSANITY
 
-러브크래프트풍 텍스트 로그라이크. 서울 2033처럼 매 판 인카운터가 다른 순서로 나오고, 죽으면 처음부터 다시 시작합니다.
-이 저장소에는 **게임 엔진/화면**과 인카운터를 채워 넣기 위한 **에디터**가 들어 있습니다.
+선택지 기반 텍스트 로그라이크를 **만들고 플레이하는 플랫폼**입니다. 서울 2033처럼 매 판 인카운터가 다른 순서로 나오고, 죽으면 처음부터 다시 시작합니다.
+
+- **플레이어**: 로그인하면 공개된 이야기 목록이 나오고, 골라서 플레이합니다. 진행은 계정에 저장됩니다.
+- **제작자**: "제작자 화면"에서 내 이야기(초안/공개 중)를 만들고, 누르면 에디터로 편집합니다. 공개해야 플레이어 목록에 나옵니다.
+- 사용자, 이야기, 플레이 저장은 **PostgreSQL**에 저장됩니다.
+
+## 시작하기
+
+필요한 것: Node.js 22 이상, PostgreSQL (아래 둘 중 하나)
 
 ```bash
 npm install
+cp .env.example .env          # Windows PowerShell: Copy-Item .env.example .env
+
+# PostgreSQL이 없다면 Docker로 (DB 이름/계정이 .env.example과 같게 만들어짐)
+docker compose up -d
+
 npm run dev
 ```
 
-- 게임: http://localhost:5173/
-- 에디터: http://localhost:5173/editor.html
+- http://localhost:5173 — 회원가입 후 바로 쓸 수 있습니다. 같은 와이파이의 휴대폰에서는 `npm run dev`가 출력하는 Network 주소로 접속하세요.
+- `npm run dev`는 API 서버(`server/`, 3000번)와 화면(Vite, 5173번)을 함께 띄웁니다. DB 테이블은 서버가 시작할 때 자동으로 만들어집니다.
+- 이미 설치된 PostgreSQL을 쓰려면 DB와 계정을 만들고 `.env`의 `DATABASE_URL`을 그 주소로 바꾸세요.
 
-`content/` 폴더의 예시 인카운터 10개(흑포 기행)는 기능 시연용입니다. 에디터에서 지우고 새로 채우면 됩니다.
+### 예시 이야기 넣기
+
+`content/` 폴더의 예시(흑포 기행, 인카운터 11개)를 내 계정의 이야기로 넣을 수 있습니다. 먼저 사이트에서 회원가입한 뒤:
+
+```bash
+npm run story:import -- --owner 내이메일@example.com --publish
+```
+
+### 배포
+
+```bash
+npm run build
+npm start          # 서버 하나가 API와 화면을 모두 제공 (PORT, 기본 3000)
+```
+
+- HTTPS 뒤에서 서비스하는 것을 전제로 로그인 쿠키에 Secure가 붙습니다. HTTP로 시험할 때만 `.env`에 `COOKIE_SECURE=false`.
+- 리버스 프록시(nginx 등) 뒤라면 `Host` 또는 `X-Forwarded-Host`를 원래 주소로 넘겨 주세요 (다른 사이트에서 온 요청을 막는 데 씁니다).
+
+## 주소
+
+| 주소 | 화면 |
+| --- | --- |
+| `/login` | 로그인 / 회원가입 |
+| `/` | 플레이어: 공개된 이야기 목록 |
+| `/play/<이야기 id>` | 게임 |
+| `/create` | 제작자: 내 이야기 목록 (새 이야기, 공개/비공개, 삭제) |
+| `/edit/<이야기 id>` | 에디터 (내 이야기만) |
+
+## 초안과 공개본
+
+- 에디터의 **저장**은 *초안*만 바꿉니다. **공개하기**(또는 "수정 사항 공개")를 눌러야 플레이어가 보는 *공개본*이 초안으로 바뀝니다. 그래서 공개 중인 이야기를 고치는 동안에도 플레이어는 이전 공개본을 그대로 플레이합니다.
+- 검증 오류(없는 페이지/아이템 참조 등)가 있으면 공개되지 않습니다.
+- 같은 이야기를 두 탭/기기에서 편집하다가 한쪽이 먼저 저장하면, 다른 쪽 저장은 덮어쓰지 않고 거부됩니다 (새로고침 후 브라우저에 백업된 작업을 복구할 수 있음).
+- 공개본이 바뀌어 진행 중이던 장면이 사라지면 그 플레이어의 저장은 "이어하기" 대신 새로 시작하게 됩니다.
 
 ## 게임 규칙
 
@@ -22,7 +68,7 @@ npm run dev
 | 아이템 | 개수가 있는 소지품 (플레이어에게 보임) |
 | 능력 | 있거나 없는 특성 (플레이어에게 보임) |
 | 플래그 | 플레이어에게 보이지 않는 숫자 변수. 이야기 진행 상태 기억용 |
-| 저장 | 매 선택마다 자동 저장. 엔딩에 도달하면 저장이 지워짐 (영구 죽음) |
+| 저장 | 매 선택마다 계정(DB)에 자동 저장. 엔딩에 도달하면 저장이 지워짐 (영구 죽음) |
 
 정신력이 낮아지면 화면이 어두워지고 흔들립니다.
 
@@ -86,7 +132,8 @@ npm run dev
 | 검증 | 없는 페이지/아이템 참조, 도달할 수 없는 페이지, 등장할 방법이 없는 인카운터, 선행 관계 순환 등 |
 | 시뮬레이션 | 무작위로 수천 판을 돌려 인카운터별 출현률/처음 나오는 순번/엔딩 분포 확인 |
 
-- **저장** (Ctrl+S): `content/` 폴더에 바로 기록합니다. 저장 전 작업은 브라우저에 자동 백업되어, 창을 닫아도 다음에 복구할 수 있습니다.
+- **저장** (Ctrl+S): 서버에 초안으로 저장합니다. 저장 전 작업은 브라우저에 자동 백업되어, 창을 닫아도 다음에 복구할 수 있습니다.
+- **공개하기**: 저장한 뒤 초안을 공개본으로 만듭니다 (위 "초안과 공개본").
 - **되돌리기/다시** (Ctrl+Z / Ctrl+Shift+Z).
 - **▶ 테스트 플레이**: 저장하지 않은 내용으로 새 탭에서 실행합니다. 테스트 탭이 열려 있으면 에디터에서 고친 내용이 바로 반영됩니다. 테스트 화면의 디버그 패널(`` ` `` 키)에서 체력/정신력/아이템/능력/플래그를 바꾸거나, 각 인카운터가 지금 왜 나올 수 없는지 확인하고 바로 시작할 수 있습니다.
 - 아이템/능력/플래그/인카운터/엔딩 선택 칸의 맨 아래 **"＋ 새 … 만들기"**로 작업 도중 바로 만들 수 있습니다.
@@ -123,7 +170,7 @@ npm run dev
 }
 ```
 
-## 콘텐츠 파일
+## 이야기 JSON 형식
 
 ```
 content/
@@ -204,26 +251,35 @@ content/
 
 | 명령 | 설명 |
 | --- | --- |
-| `npm run dev` | 게임 + 에디터 개발 서버 |
-| `npm run content` | `content/` 파일을 표준 형식으로 정리(빠진 필드/id 채움)하고 검증 결과 출력 |
-| `npm run content:check` | 검증만 (오류가 있으면 실패) |
-| `npm run content -- --import 파일.json` | 에디터 "내보내기" 파일로 `content/`를 덮어씀 |
-| `npm test` | 엔진 테스트 |
-| `npm run build` | `dist/`에 정적 사이트 빌드 (게임 + 에디터). 빌드된 에디터는 파일 저장 대신 내려받기만 가능 |
+| `npm run dev` | API 서버 + 화면 개발 서버 (코드를 고치면 자동 반영) |
+| `npm run build` / `npm start` | 배포용 빌드 / 실행 |
+| `npm run db:migrate` | DB 테이블 만들기·갱신 (서버 시작 때도 자동 실행) |
+| `npm run story:import -- --owner 이메일 [--from 폴더나_파일.json] [--publish] [--story id]` | 파일로 된 이야기를 DB에 넣기 (`--story`면 그 이야기의 초안을 덮어씀) |
+| `npm run content` / `npm run content:check` | `content/` 형식 파일 정리 / 검증 (JSON으로 직접 쓸 때) |
+| `npm test` | 테스트. `.env`에 `TEST_DATABASE_URL`이 있으면 실제 DB로 API까지 검사 (그 DB의 데이터는 지워짐) |
 
 ## 코드 구조
 
 ```
-src/engine/     게임 규칙 (UI와 무관한 순수 TypeScript)
-  types.ts        데이터 모델
-  run.ts          한 판의 진행 (선택, 계속, 엔딩)
-  scheduler.ts    다음 인카운터 선택 규칙
-  conditions.ts / effects.ts / describe.ts
-  content.ts      JSON 정규화, 파일 분할/결합
-  validate.ts     검증
-  simulate.ts     시뮬레이션
+server/         API 서버 (Hono + node-postgres)
+  migrations/     DB 스키마 (순서대로 한 번씩 적용)
+  routes/         auth (회원가입/로그인), stories (플레이어), my-stories (제작자)
+  auth.ts         비밀번호(scrypt), 세션 쿠키, 출처 확인
+src/engine/     게임 규칙 (UI와 무관한 순수 TypeScript) — 서버의 공개 전 검증에도 사용
 src/markup/     글자 서식: parse.ts(파서), registry.tsx(효과 목록), render.tsx, markup.css
-src/game/       게임 화면 (React)
-src/editor/     에디터 (React)
-tools/          개발 서버 저장 API, content CLI
+src/platform/   로그인, 이야기 목록, 제작자 목록 (index.html)
+src/game/       게임 화면 (play.html)
+src/editor/     에디터 (editor.html)
+src/shared/     API 호출/응답 형식, 브라우저 저장소
+tools/          개발 실행(dev.mjs), 이야기 가져오기, content CLI
+content/        예시 이야기 (파일 형식)
 ```
+
+### DB 테이블
+
+| 테이블 | 내용 |
+| --- | --- |
+| `users` | 이메일(소문자), 표시 이름, 비밀번호 해시(scrypt) |
+| `sessions` | 로그인 세션. 쿠키의 무작위 토큰은 해시로만 저장, 30일 |
+| `stories` | 작가, `draft`(초안, JSONB), `draft_version`, `published`(공개본, JSONB, 없으면 비공개) |
+| `saves` | 사용자 × 이야기별 진행 중인 판 (JSONB) |

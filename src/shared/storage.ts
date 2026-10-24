@@ -6,11 +6,9 @@ import type { GameContent } from '../engine/types';
 export const STORAGE_KEYS = {
   /** 에디터 → 테스트 플레이로 넘기는 작업 중 콘텐츠 */
   playtestContent: 'insanity.playtest.content',
-  /** 일반 플레이 저장 */
-  run: 'insanity.run',
   /** 테스트 플레이 저장 */
   playtestRun: 'insanity.playtest.run',
-  /** 에디터 자동 백업 */
+  /** 에디터 자동 백업 (뒤에 이야기 id를 붙인다) */
   editorDraft: 'insanity.editor.draft',
   /** 게임 설정 (글꼴 크기 등) */
   settings: 'insanity.settings',

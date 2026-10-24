@@ -3,6 +3,8 @@ import { joinContent, normalizeContent, splitContent } from '../engine/content';
 import type { GameContent } from '../engine/types';
 import { validateContent } from '../engine/validate';
 import { EFFECT_TAGS } from '../markup/registry';
+import { api, ApiError, idFromPath, redirectToLogin } from '../shared/api';
+import type { EditStoryInfo, EditStoryResponse } from '../shared/api-types';
 import { readStorage, STORAGE_KEYS, writeStorage } from '../shared/storage';
 import { DefinitionsPanel, EndingsPanel, IssuesPanel, SettingsPanel } from './components/DefinitionsPanel';
 import { EncounterEditor } from './components/EncounterEditor';
@@ -12,42 +14,38 @@ import { HelpPanel } from './components/HelpPanel';
 import { SimulationPanel } from './components/SimulationPanel';
 import { EditorProvider, useHistory, type Nav, type Tab } from './state';
 
-interface Loaded {
-  content: GameContent;
-  /** 개발 서버 API로 파일에 직접 저장할 수 있는지 */
-  server: boolean;
-}
+// /edit/<이야기 id> — 내 이야기의 초안을 서버에서 불러와 편집하고 저장/공개한다
 
-async function loadInitial(): Promise<Loaded> {
-  try {
-    const res = await fetch('/api/content');
-    if (res.ok) {
-      const bundle = await res.json();
-      return { content: joinContent(bundle.game, bundle.encounters), server: true };
-    }
-  } catch {
-    // 개발 서버가 아님
-  }
-  try {
-    // 빌드 결과물에는 content-bundle.json이 함께 들어간다
-    const res = await fetch('./content-bundle.json');
-    if (res.ok) {
-      const bundle = await res.json();
-      return { content: joinContent(bundle.game, bundle.encounters), server: false };
-    }
-  } catch {
-    // 없음
-  }
-  return { content: normalizeContent({}), server: false };
-}
+type LoadState = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; story: EditStoryInfo; content: GameContent };
 
 export function EditorApp() {
-  const [loaded, setLoaded] = useState<Loaded | null>(null);
+  const [state, setState] = useState<LoadState>({ status: 'loading' });
   useEffect(() => {
-    loadInitial().then(setLoaded);
+    api<EditStoryResponse>(`/my/stories/${idFromPath()}`)
+      .then((res) => {
+        const content = normalizeContent(res.content);
+        document.title = `${content.meta.title || '제목 없음'} — 에디터`;
+        setState({ status: 'ready', story: res.story, content });
+      })
+      .catch((err) => {
+        if (err instanceof ApiError && err.status === 401) redirectToLogin();
+        else setState({ status: 'error', message: err instanceof Error ? err.message : String(err) });
+      });
   }, []);
-  if (!loaded) return <div className="loading">불러오는 중…</div>;
-  return <Editor initial={loaded.content} server={loaded.server} />;
+  if (state.status === 'loading') return <div className="loading">불러오는 중…</div>;
+  if (state.status === 'error') {
+    return (
+      <div className="loading">
+        <div>
+          <p>{state.message}</p>
+          <a className="btn" href="/create">
+            내 이야기 목록으로
+          </a>
+        </div>
+      </div>
+    );
+  }
+  return <Editor story={state.story} initial={state.content} />;
 }
 
 const TABS: { tab: Tab; label: string }[] = [
@@ -75,18 +73,27 @@ function downloadJson(name: string, data: unknown) {
   URL.revokeObjectURL(a.href);
 }
 
-function Editor({ initial, server }: { initial: GameContent; server: boolean }) {
+function publishLabel(info: EditStoryInfo, dirty: boolean): string {
+  if (!info.isPublished) return '공개하기';
+  return info.hasUnpublishedChanges || dirty ? '수정 사항 공개' : '공개됨';
+}
+
+function Editor({ story, initial }: { story: EditStoryInfo; initial: GameContent }) {
   const { content, update, replace, undo, redo, canUndo, canRedo } = useHistory(initial);
   const [saved, setSaved] = useState(initial);
-  const [saveState, setSaveState] = useState<{ status: 'idle' | 'saving' | 'error'; message?: string }>({ status: 'idle' });
+  const [info, setInfo] = useState(story);
+  const [saveState, setSaveState] = useState<{ status: 'idle' | 'saving' | 'error'; message?: string; conflict?: boolean }>({ status: 'idle' });
+  const [publishIssues, setPublishIssues] = useState<{ message: string; issues: string[] } | null>(null);
   const [nav, setNav] = useState<Nav>({ tab: 'encounters', encounterId: initial.encounters[0]?.id ?? null });
+  const draftKey = `${STORAGE_KEYS.editorDraft}.${story.id}`;
   const [draftOffer, setDraftOffer] = useState<Draft | null>(() => {
-    const draft = readStorage<Draft>(STORAGE_KEYS.editorDraft);
+    const draft = readStorage<Draft>(draftKey);
     if (!draft?.content) return null;
     const normalized = normalizeContent(draft.content);
     return JSON.stringify(normalized) === JSON.stringify(initial) ? null : { content: normalized, savedAt: draft.savedAt };
   });
   const playtestOpened = useRef(false);
+  const saving = useRef(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
   const issues = useMemo(() => validateContent(content, { markupTags: EFFECT_TAGS }), [content]);
@@ -99,12 +106,12 @@ function Editor({ initial, server }: { initial: GameContent; server: boolean }) 
   useEffect(() => {
     if (draftOffer) return;
     if (!dirty) {
-      writeStorage(STORAGE_KEYS.editorDraft, null);
+      writeStorage(draftKey, null);
       return;
     }
-    const t = setTimeout(() => writeStorage(STORAGE_KEYS.editorDraft, { content, savedAt: Date.now() }), 600);
+    const t = setTimeout(() => writeStorage(draftKey, { content, savedAt: Date.now() }), 600);
     return () => clearTimeout(t);
-  }, [content, dirty, draftOffer]);
+  }, [content, dirty, draftOffer, draftKey]);
 
   // 테스트 플레이 창이 열려 있으면 수정 사항을 바로 보냄
   useEffect(() => {
@@ -125,34 +132,59 @@ function Editor({ initial, server }: { initial: GameContent; server: boolean }) 
       writeStorage(STORAGE_KEYS.playtestContent, content);
       playtestOpened.current = true;
       const start = startEncounterId ? `&start=${encodeURIComponent(startEncounterId)}` : '';
-      window.open(`index.html?playtest=${Date.now()}${start}`, 'insanity-playtest');
+      window.open(`/play/${story.id}?playtest=${Date.now()}${start}`, 'insanity-playtest');
     },
+    [content, story.id],
+  );
+
+  const exportFile = useCallback(
+    () => downloadJson(`${content.meta.title || 'story'}.json`, splitContent(content)),
     [content],
   );
 
-  const exportFile = useCallback(() => downloadJson('insanity-content.json', splitContent(content)), [content]);
-
-  const save = useCallback(async () => {
-    if (!server) {
-      exportFile();
-      return;
-    }
+  /** 서버에 초안 저장. 성공하면 true */
+  const save = useCallback(async (): Promise<boolean> => {
+    if (saving.current) return false;
+    if (!dirty) return true;
+    saving.current = true;
     const snapshot = content;
     setSaveState({ status: 'saving' });
     try {
-      const res = await fetch('/api/content', {
+      const res = await api<{ story: EditStoryInfo }>(`/my/stories/${story.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(splitContent(snapshot)),
+        body: { content: snapshot, version: info.version },
       });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
+      setInfo(res.story);
       setSaved(snapshot);
       setSaveState({ status: 'idle' });
-    } catch (e) {
-      setSaveState({ status: 'error', message: e instanceof Error ? e.message : String(e) });
+      return true;
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) redirectToLogin();
+      setSaveState({
+        status: 'error',
+        message: err instanceof Error ? err.message : String(err),
+        conflict: err instanceof ApiError && err.status === 409,
+      });
+      return false;
+    } finally {
+      saving.current = false;
     }
-  }, [content, server, exportFile]);
+  }, [content, dirty, info.version, story.id]);
+
+  /** 저장한 뒤 초안을 공개본으로 */
+  const publish = useCallback(async () => {
+    if (!(await save())) return;
+    setPublishIssues(null);
+    try {
+      const res = await api<{ story: EditStoryInfo }>(`/my/stories/${story.id}/publish`, { method: 'POST' });
+      setInfo(res.story);
+    } catch (err) {
+      setPublishIssues({
+        message: err instanceof Error ? err.message : String(err),
+        issues: err instanceof ApiError ? (err.body.issues ?? []) : [],
+      });
+    }
+  }, [save, story.id]);
 
   const importFile = async (file: File) => {
     try {
@@ -213,8 +245,14 @@ function Editor({ initial, server }: { initial: GameContent; server: boolean }) 
     <EditorProvider value={{ content, update, issues, nav, navigate, playtest }}>
       <div className="editor">
         <header className="editor-header">
+          <a className="back-link" href="/create" title="내 이야기 목록">
+            ←
+          </a>
           <div className="brand">
-            {content.meta.title || 'INSANITY'} <span>에디터</span>
+            {content.meta.title || '제목 없음'} <span>에디터</span>
+            <span className={`story-status ${info.isPublished ? (info.hasUnpublishedChanges ? 'warn' : 'live') : ''}`}>
+              {info.isPublished ? (info.hasUnpublishedChanges ? '공개 중 · 미반영 수정' : '공개 중') : '초안'}
+            </span>
           </div>
           <nav className="tabs">
             {TABS.map((t) => (
@@ -242,11 +280,20 @@ function Editor({ initial, server }: { initial: GameContent; server: boolean }) 
                     ? '● 저장 안 됨'
                     : '저장됨'}
             </span>
-            <button type="button" className="btn primary" onClick={save} title={server ? 'content/ 폴더에 저장 (Ctrl+S)' : 'JSON 파일로 내려받기'}>
-              {server ? '저장' : '파일로 저장'}
+            <button type="button" className="btn primary" onClick={save} title="서버에 초안 저장 (Ctrl+S). 플레이어에게는 공개해야 보입니다">
+              저장
             </button>
             <button type="button" className="btn" onClick={() => playtest()} title="처음부터 테스트 플레이 (새 탭)">
               ▶ 테스트 플레이
+            </button>
+            <button
+              type="button"
+              className="btn publish"
+              onClick={publish}
+              disabled={info.isPublished && !info.hasUnpublishedChanges && !dirty}
+              title="저장한 뒤 플레이어 목록에 공개합니다. 검증 오류가 있으면 공개되지 않습니다"
+            >
+              {publishLabel(info, dirty)}
             </button>
             <button type="button" className="btn" onClick={exportFile} title="전체 콘텐츠를 JSON 파일 하나로 내려받기">
               내보내기
@@ -271,7 +318,32 @@ function Editor({ initial, server }: { initial: GameContent; server: boolean }) 
         {saveState.status === 'error' && (
           <div className="banner error">
             저장 실패: {saveState.message}
+            {saveState.conflict && (
+              <button type="button" className="btn small" onClick={() => location.reload()} title="지금 작업은 브라우저에 백업되어 새로고침 후 복구할 수 있습니다">
+                새로고침
+              </button>
+            )}
             <button type="button" className="link-btn" onClick={() => setSaveState({ status: 'idle' })}>
+              닫기
+            </button>
+          </div>
+        )}
+        {publishIssues && (
+          <div className="banner error">
+            <div>
+              {publishIssues.message}
+              {publishIssues.issues.length > 0 && (
+                <ul className="banner-list">
+                  {publishIssues.issues.map((i, k) => (
+                    <li key={k}>{i}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <button type="button" className="link-btn" onClick={() => navigate({ tab: 'issues' })}>
+              검증 탭 보기
+            </button>
+            <button type="button" className="link-btn" onClick={() => setPublishIssues(null)}>
               닫기
             </button>
           </div>
@@ -295,13 +367,6 @@ function Editor({ initial, server }: { initial: GameContent; server: boolean }) 
             </button>
           </div>
         )}
-        {!server && (
-          <div className="banner muted">
-            개발 서버(npm run dev)가 아니라서 파일에 직접 저장할 수 없습니다. "파일로 저장"으로 내려받은 뒤 <code>npm run content -- --import 파일.json</code>
-            으로 content/ 폴더에 반영하세요.
-          </div>
-        )}
-
         <div className="editor-body">
           {nav.tab === 'encounters' ? (
             <>

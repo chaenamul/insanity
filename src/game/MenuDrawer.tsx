@@ -46,6 +46,9 @@ export function MenuDrawer({ open, onClose, title, settings, onSettings, onTitle
         <button type="button" className="menu-item" onClick={onTitle}>
           타이틀 화면으로
         </button>
+        <a className="menu-item" href="/">
+          이야기 목록으로
+        </a>
         {debug && (
           <button type="button" className="menu-item" onClick={debug.toggle}>
             디버그 패널 {debug.open ? '닫기' : '열기'} <span className="menu-hint">` 키</span>

@@ -1,0 +1,16 @@
+# 로컬 개발용 PostgreSQL:  docker compose up -d
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: insanity
+      POSTGRES_PASSWORD: insanity
+      POSTGRES_DB: insanity
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # 테스트용 DB도 함께 만든다
+      - ./server/docker-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+volumes:
+  pgdata:

@@ -1,7 +1,7 @@
 import { mkdir, readdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-// content/ 폴더 입출력. 개발 서버 API와 CLI(npm run content)가 함께 쓴다.
+// content/ 폴더 입출력. CLI(npm run content, npm run story:import)가 쓴다.
 //   content/game.json              메타/시작 설정/아이템/능력/플래그/엔딩 + 인카운터 순서
 //   content/encounters/<id>.json   인카운터 하나당 파일 하나
 
@@ -12,8 +12,7 @@ export interface ContentBundle {
   encounters: { id: string }[];
 }
 
-function paths(root: string) {
-  const contentDir = join(root, 'content');
+function paths(root: string, contentDir = join(root, 'content')) {
   return { contentDir, encounterDir: join(contentDir, 'encounters'), gamePath: join(contentDir, 'game.json') };
 }
 
@@ -25,8 +24,9 @@ async function readJson(path: string): Promise<unknown> {
   }
 }
 
-export async function readContentFiles(root: string): Promise<ContentBundle> {
-  const { encounterDir, gamePath } = paths(root);
+/** contentDir를 주면 그 폴더(game.json + encounters/)를, 아니면 <root>/content를 읽는다 */
+export async function readContentFiles(root: string, contentDir?: string): Promise<ContentBundle> {
+  const { encounterDir, gamePath } = paths(root, contentDir);
   await mkdir(encounterDir, { recursive: true });
   const game = await readJson(gamePath).catch(() => ({}));
   const files = (await readdir(encounterDir)).filter((f) => f.endsWith('.json')).sort();
@@ -34,7 +34,7 @@ export async function readContentFiles(root: string): Promise<ContentBundle> {
   return { game, encounters };
 }
 
-/** 내용이 같으면 쓰지 않는다 (불필요한 HMR/깃 변경 방지) */
+/** 내용이 같으면 쓰지 않는다 (불필요한 깃 변경 방지) */
 async function writeIfChanged(path: string, data: unknown): Promise<boolean> {
   const text = `${JSON.stringify(data, null, 2)}\n`;
   try {

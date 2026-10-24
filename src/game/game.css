@@ -77,6 +77,31 @@ button {
   padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
   background: radial-gradient(ellipse at 50% 120%, #10231d 0%, var(--bg) 60%);
 }
+.title-back {
+  position: fixed;
+  top: max(14px, env(safe-area-inset-top));
+  left: 16px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: var(--muted);
+  text-decoration: none;
+}
+.title-back:hover {
+  color: var(--accent);
+}
+.load-error {
+  color: var(--bad);
+  margin-bottom: 20px;
+}
+a.btn {
+  display: inline-block;
+  text-decoration: none;
+  color: inherit;
+}
+a.menu-item {
+  text-decoration: none;
+  color: inherit;
+}
 .title-card {
   width: 100%;
   max-width: 520px;
