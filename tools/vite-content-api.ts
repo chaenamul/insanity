@@ -1,6 +1,6 @@
 import type { IncomingMessage } from 'node:http';
 import type { Plugin } from 'vite';
-import { readContentFiles, writeContentFiles, type ContentBundle } from './content-files';
+import { readContentFiles, writeContentFiles, type ContentBundle } from './content-files.ts';
 
 // 개발 서버 전용 API: 에디터가 content/ 폴더를 직접 읽고 쓴다.
 //   GET /api/content  → { game, encounters: [...] }
