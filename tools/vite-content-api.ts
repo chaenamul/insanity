@@ -6,6 +6,12 @@ import { readContentFiles, writeContentFiles, type ContentBundle } from './conte
 //   GET /api/content  → { game, encounters: [...] }
 //   PUT /api/content  → 같은 형식을 받아 저장
 // 빌드 시에는 같은 형식의 content-bundle.json을 함께 내보내 (서버 없는) 에디터가 읽을 수 있게 한다.
+// 개발 서버는 같은 네트워크(모바일 테스트)에도 열려 있으므로, 파일 쓰기(PUT)는 이 PC에서 온 요청만 받는다.
+
+function isLocalRequest(req: IncomingMessage): boolean {
+  const addr = req.socket.remoteAddress ?? '';
+  return addr === '127.0.0.1' || addr === '::1' || addr === '::ffff:127.0.0.1';
+}
 
 function readBody(req: IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -33,6 +39,10 @@ export function contentApi(root: string): Plugin {
           if (req.method === 'GET') {
             send(200, await readContentFiles(root));
           } else if (req.method === 'PUT') {
+            if (!isLocalRequest(req)) {
+              send(403, { error: '저장은 개발 서버를 실행한 PC에서만 할 수 있습니다' });
+              return;
+            }
             const body = JSON.parse(await readBody(req)) as ContentBundle;
             if (!body || typeof body.game !== 'object' || !Array.isArray(body.encounters)) {
               send(400, { error: '잘못된 형식입니다' });
