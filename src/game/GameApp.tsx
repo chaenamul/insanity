@@ -11,6 +11,7 @@ import { Hud } from './Hud';
 import { Dock, ItemList, signatures, TraitList, type SheetKind } from './Inventory';
 import { MenuDrawer } from './MenuDrawer';
 import { Sheet } from './Overlays';
+import { ScrollArea } from './ScrollArea';
 import { FONT_SIZES, useSettings } from './settings';
 
 interface SavedRun {
@@ -143,16 +144,16 @@ export function GameApp() {
       <main className="page">
         {!compatible ? (
           <>
-            <div className="story-scroll">
+            <ScrollArea className="story-scroll">
               <p className="notice">콘텐츠가 바뀌어 진행 중이던 장면을 찾을 수 없습니다.</p>
-            </div>
-            <div className="choice-scroll">
+            </ScrollArea>
+            <ScrollArea className="choice-scroll">
               <div className="choice-list">
                 <button type="button" className="choice" onClick={() => startNew()}>
                   <span className="choice-text">새로 시작한다</span>
                 </button>
               </div>
-            </div>
+            </ScrollArea>
           </>
         ) : run.ending ? (
           <EndingView content={content} state={run} onRestart={() => startNew()} onTitle={toTitle} />

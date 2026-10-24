@@ -1,5 +1,6 @@
 import type { EndingKind, GameContent, RunState } from '../engine/types';
 import { RichText } from '../markup/render';
+import { ScrollArea } from './ScrollArea';
 
 const KIND_LABELS: Record<EndingKind, string> = {
   death: '사망',
@@ -20,7 +21,7 @@ export function EndingView({ content, state, onRestart, onTitle }: Props) {
   const kind = ending?.kind ?? 'other';
   return (
     <>
-      <div className="story-scroll">
+      <ScrollArea className="story-scroll">
         <article className={`ending ending-${kind}`}>
           <p className="ending-kind">{KIND_LABELS[kind]}</p>
           <h2>{ending?.title ?? state.ending}</h2>
@@ -44,8 +45,8 @@ export function EndingView({ content, state, onRestart, onTitle }: Props) {
             </div>
           </dl>
         </article>
-      </div>
-      <div className="choice-scroll">
+      </ScrollArea>
+      <ScrollArea className="choice-scroll">
         <div className="choice-list">
           <button type="button" className="choice" onClick={onRestart}>
             <span className="choice-text">다시 시작한다</span>
@@ -54,7 +55,7 @@ export function EndingView({ content, state, onRestart, onTitle }: Props) {
             <span className="choice-text">타이틀 화면으로</span>
           </button>
         </div>
-      </div>
+      </ScrollArea>
     </>
   );
 }

@@ -236,16 +236,33 @@ button {
   border-radius: 2px;
 }
 
-/* 가운데: 본문 62% / 선택지 38%. 각각 안에서만 스크롤 */
+/* 가운데: 본문은 위에서부터, 선택지는 본문 바로 아래.
+   둘이 화면에 다 들어가지 않으면 선택지는 버튼 높이만큼만 차지하고 하단에 남고, 본문이 줄어들어 그 안에서 스크롤된다. */
 .page {
   flex: 1;
   min-height: 0;
-  display: grid;
-  grid-template-rows: minmax(0, 62fr) minmax(0, 38fr);
+  display: flex;
+  flex-direction: column;
   font-size: var(--story-size, 17px);
 }
-.story-scroll,
-.choice-scroll {
+.scroll-frame {
+  position: relative;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.story-scroll-frame {
+  flex: 0 1 auto;
+}
+.choice-scroll-frame {
+  flex: 0 0 auto;
+  /* 선택지가 아주 많거나 글자가 커도 본문 자리는 남긴다 */
+  max-height: 65%;
+}
+.scroll-area {
+  position: relative;
+  flex: 0 1 auto;
+  min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
@@ -253,28 +270,76 @@ button {
   scrollbar-color: var(--line-2) transparent;
 }
 .story-scroll {
-  position: relative;
-  padding: 18px 22px 28px;
-  /* 위아래 가장자리를 흐리게 해서 본문이 선택지로 이어져 보이게 */
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 12px, #000 calc(100% - 26px), transparent 100%);
-  mask-image: linear-gradient(to bottom, transparent 0, #000 12px, #000 calc(100% - 26px), transparent 100%);
+  padding: 18px 22px 6px;
 }
 .choice-scroll {
-  padding: 0 22px 14px;
+  padding: 6px 22px 14px;
 }
-/* 본문이 짧으면 아래(선택지 바로 위)에 붙고, 길면 위에서부터 스크롤 */
-.story-scroll {
+
+/* 스크롤이 남은 쪽에 페이드 + 작은 화살표 */
+.scroll-hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  height: 40px;
   display: flex;
-  flex-direction: column;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s;
 }
-.story-scroll > * {
-  flex: none;
+.scroll-hint.up {
+  top: 0;
+  align-items: flex-start;
+  background: linear-gradient(to bottom, var(--bg) 15%, transparent);
 }
-.story-scroll > .log {
-  margin-top: auto;
+.scroll-hint.down {
+  bottom: 0;
+  align-items: flex-end;
+  background: linear-gradient(to top, var(--bg) 15%, transparent);
 }
-.story-scroll > .ending {
-  margin: auto 0;
+.scroll-hint.show {
+  opacity: 1;
+}
+.scroll-hint button {
+  width: 36px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.scroll-hint.show button {
+  pointer-events: auto;
+}
+.scroll-hint button::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid var(--accent);
+  border-bottom: 1.5px solid var(--accent);
+  opacity: 0.85;
+}
+.scroll-hint.down button::before {
+  transform: translateY(-2px) rotate(45deg);
+  animation: hint-down 1.6s ease-in-out infinite;
+}
+.scroll-hint.up button::before {
+  transform: translateY(2px) rotate(-135deg);
+  animation: hint-up 1.6s ease-in-out infinite;
+}
+@keyframes hint-down {
+  50% {
+    transform: translateY(1px) rotate(45deg);
+  }
+}
+@keyframes hint-up {
+  50% {
+    transform: translateY(-1px) rotate(-135deg);
+  }
 }
 
 .passage p {
@@ -332,7 +397,7 @@ button {
   width: 32px;
   height: 1px;
   background: var(--accent-dim);
-  margin: 2px 0 10px;
+  margin: 4px 0 10px;
 }
 .choice {
   display: block;
@@ -382,8 +447,7 @@ button {
 
 /* 엔딩 */
 .ending {
-  text-align: center;
-  padding-top: 12px;
+  padding-top: 4px;
 }
 .ending h2 {
   font-size: 2em;
@@ -408,7 +472,6 @@ button {
 }
 .ending-summary {
   display: flex;
-  justify-content: center;
   gap: 28px;
   margin: 1.6em 0 0;
   font-family: var(--font-sans);
@@ -725,10 +788,10 @@ button {
     border-right: 1px solid var(--line);
   }
   .story-scroll {
-    padding: 28px 36px 32px;
+    padding: 28px 36px 6px;
   }
   .choice-scroll {
-    padding: 0 36px 18px;
+    padding: 6px 36px 18px;
   }
 }
 

@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, type ReactNode } from 'react';
 import type { EncounterView as View } from '../engine/run';
 import type { LogEntry, RunState } from '../engine/types';
 import { RichInline, RichText } from '../markup/render';
+import { ScrollArea } from './ScrollArea';
 
 interface Props {
   state: RunState;
@@ -73,12 +74,12 @@ export function EncounterView({ state, view, onChoose, onProceed }: Props) {
 
   return (
     <>
-      <div className="story-scroll" ref={storyRef}>
+      <ScrollArea className="story-scroll" scrollRef={storyRef}>
         <article className="log" key={encounterKey}>
           {renderLog(view.current.log)}
         </article>
-      </div>
-      <div className="choice-scroll" ref={choicesRef}>
+      </ScrollArea>
+      <ScrollArea className="choice-scroll" scrollRef={choicesRef}>
         <div className="choice-list" key={`${encounterKey}-${logLength}`}>
           {view.choices.map((c) => (
             <button key={c.id} type="button" className={`choice ${c.enabled ? '' : 'locked'}`} disabled={!c.enabled} onClick={() => onChoose(c.id)}>
@@ -98,7 +99,7 @@ export function EncounterView({ state, view, onChoose, onProceed }: Props) {
             </button>
           )}
         </div>
-      </div>
+      </ScrollArea>
     </>
   );
 }
