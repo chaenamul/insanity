@@ -22,7 +22,17 @@ npm run dev
 
 - http://localhost:5173 — 회원가입 후 바로 쓸 수 있습니다. 같은 와이파이의 휴대폰에서는 `npm run dev`가 출력하는 Network 주소로 접속하세요.
 - `npm run dev`는 API 서버(`server/`, 3000번)와 화면(Vite, 5173번)을 함께 띄웁니다. DB 테이블은 서버가 시작할 때 자동으로 만들어집니다.
-- 이미 설치된 PostgreSQL을 쓰려면 DB와 계정을 만들고 `.env`의 `DATABASE_URL`을 그 주소로 바꾸세요.
+- 이미 설치된 PostgreSQL을 쓰려면 Docker 대신 관리자 계정으로 아래를 한 번 실행하세요. `.env.example`과 같은 계정(`insanity`)과 DB(`insanity`, 테스트용 `insanity_test`)가 만들어집니다. 다른 계정/DB를 쓰려면 `.env`의 `DATABASE_URL`을 그 주소로 바꾸세요.
+
+  ```bash
+  psql -U postgres -h localhost -f server/local-setup.sql
+  ```
+
+  Windows에서 `psql`이 PATH에 없으면 전체 경로로 실행합니다 (PowerShell, 버전 번호는 설치한 것에 맞게):
+
+  ```powershell
+  & 'C:\Program Files\PostgreSQL\17\bin\psql.exe' -U postgres -h localhost -f server/local-setup.sql
+  ```
 
 ### 예시 이야기 넣기
 
