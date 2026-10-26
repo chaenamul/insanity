@@ -1,6 +1,6 @@
 import { evaluate } from './conditions';
 import { conditionTags, type ConditionTag } from './describe';
-import { applyEffects, checkDeath } from './effects';
+import { applyEffects, checkDeath, clampStat, isZeroEnding } from './effects';
 import { makeSeed, weightedPick } from './rng';
 import { selectNextEncounter } from './scheduler';
 import {
@@ -28,20 +28,35 @@ export function findNode(enc: Encounter, nodeId: string): EncounterNode | undefi
   return enc.nodes.find((n) => n.id === nodeId);
 }
 
+/** 파라미터 시작값을 상태에 채운다. 이미 값이 있는 것은 그대로 둔다 */
+function fillParams(content: GameContent, state: Pick<RunState, 'stats' | 'texts' | 'dates'>): void {
+  for (const p of content.params) {
+    if (p.kind === 'stat' && !state.stats[p.id]) {
+      const s = { value: p.value, max: p.max };
+      clampStat(s);
+      state.stats[p.id] = s;
+    } else if (p.kind === 'text' && state.texts[p.id] == null) {
+      state.texts[p.id] = p.value;
+    } else if (p.kind === 'date' && state.dates[p.id] == null) {
+      state.dates[p.id] = p.value;
+    }
+  }
+}
+
 export function createInitialState(content: GameContent, seed: number = makeSeed()): RunState {
   const s = content.start;
   const items: Record<string, number> = {};
   for (const { id, count } of s.items) if (count > 0) items[id] = (items[id] ?? 0) + count;
   const flags: Record<string, number> = {};
   for (const f of content.flags) if (f.initial !== 0) flags[f.id] = f.initial;
+  const params = { stats: {}, texts: {}, dates: {} };
+  fillParams(content, params);
   return {
     seed,
     rng: seed,
     turn: 0,
-    hp: Math.min(s.hp, s.maxHp),
-    maxHp: s.maxHp,
-    sanity: Math.min(s.sanity, s.maxSanity),
-    maxSanity: s.maxSanity,
+    ...params,
+    colors: { background: null, text: null },
     items,
     traits: [...new Set(s.traits)],
     flags,
@@ -92,6 +107,8 @@ function enterNode(content: GameContent, state: RunState, enc: Encounter, nodeId
 function beginEncounter(content: GameContent, state: RunState, encounterId: string, source: SelectionSource): void {
   const enc = findEncounter(content, encounterId)!;
   state.current = { encounterId, nodeId: null, phase: 'choose', source, log: [] };
+  // 가변 색상: 인카운터가 시작될 때 바꾸는 색 (시작 페이지의 진입 효과보다 먼저)
+  if (enc.startColors) state.colors = { ...enc.startColors };
   enterNode(content, state, enc, enc.start);
 }
 
@@ -208,18 +225,40 @@ export function debugStartEncounter(content: GameContent, prev: RunState, encoun
   return state;
 }
 
-/** 디버그: 상태 값을 직접 바꾼 뒤 사망 여부 재확인 */
-export function debugPatch(prev: RunState, patch: (draft: RunState) => void): RunState {
+/** 디버그: 상태 값을 직접 바꾼 뒤 수치 0 엔딩 여부 재확인 */
+export function debugPatch(content: GameContent, prev: RunState, patch: (draft: RunState) => void): RunState {
   const state = clone(prev);
   patch(state);
-  if (state.pendingEnding === BUILTIN_ENDINGS.death || state.pendingEnding === BUILTIN_ENDINGS.madness) {
-    state.pendingEnding = null;
-  }
-  state.hp = Math.min(Math.max(0, state.hp), state.maxHp);
-  state.sanity = Math.min(Math.max(0, state.sanity), state.maxSanity);
-  checkDeath(state);
+  if (isZeroEnding(content, state.pendingEnding)) state.pendingEnding = null;
+  for (const s of Object.values(state.stats)) clampStat(s);
+  checkDeath(content, state);
   if (state.pendingEnding && state.current) state.current.phase = 'continue';
   return state;
+}
+
+/**
+ * 저장된 판을 지금 콘텐츠에 맞춘다: 예전 형식(hp/sanity)을 파라미터로 옮기고,
+ * 저장 뒤에 추가된 파라미터는 시작값으로 채운다. 바꿀 게 없으면 같은 객체를 돌려준다.
+ */
+export function syncRunState(content: GameContent, saved: RunState): RunState {
+  const legacy = saved as RunState & { hp?: number; maxHp?: number; sanity?: number; maxSanity?: number };
+  const needsMigration = !saved.stats || !saved.texts || !saved.dates || !saved.colors;
+  const state = needsMigration ? clone(saved) : saved;
+  if (needsMigration) {
+    state.stats ??= {};
+    state.texts ??= {};
+    state.dates ??= {};
+    state.colors ??= { background: null, text: null };
+    if (legacy.hp != null) state.stats.hp ??= { value: legacy.hp, max: legacy.maxHp ?? legacy.hp };
+    if (legacy.sanity != null) state.stats.sanity ??= { value: legacy.sanity, max: legacy.maxSanity ?? legacy.sanity };
+  }
+  const missing = content.params.some((p) =>
+    p.kind === 'stat' ? !state.stats[p.id] : p.kind === 'text' ? state.texts[p.id] == null : state.dates[p.id] == null,
+  );
+  if (!missing) return state;
+  const filled = needsMigration ? state : clone(state);
+  fillParams(content, filled);
+  return filled;
 }
 
 /** 저장된 상태가 현재 콘텐츠와 맞는지 (인카운터가 삭제되었으면 이어하기 불가) */

@@ -2,20 +2,38 @@ import type { GameContent, RunState } from '../engine/types';
 
 export type SheetKind = 'items' | 'traits';
 
-/** 하단 버튼. 마지막으로 열어 본 뒤 내용이 바뀌었으면 점 표시 */
-export function Dock({ state, seen, onOpen }: { state: RunState; seen: Record<SheetKind, string>; onOpen: (kind: SheetKind) => void }) {
-  const itemCount = Object.values(state.items).reduce((sum, n) => sum + (n > 0 ? 1 : 0), 0);
+/** 제작자가 보이게 한 것만 (숨긴 것은 버튼 자체가 없다) */
+export function visibleShelves(content: GameContent): SheetKind[] {
+  return (['items', 'traits'] as const).filter((k) => content.ui[k].show);
+}
+
+/** 하단 버튼. 마지막으로 열어 본 뒤 내용이 바뀌었으면 점 표시. 보일 것이 없으면 그리지 않는다 */
+export function Dock({
+  content,
+  state,
+  seen,
+  onOpen,
+}: {
+  content: GameContent;
+  state: RunState;
+  seen: Record<SheetKind, string>;
+  onOpen: (kind: SheetKind) => void;
+}) {
+  const shelves = visibleShelves(content);
+  if (shelves.length === 0) return null;
+  const counts: Record<SheetKind, number> = {
+    items: Object.values(state.items).reduce((sum, n) => sum + (n > 0 ? 1 : 0), 0),
+    traits: state.traits.length,
+  };
   const sig = signatures(state);
   return (
-    <nav className="dock">
-      <button type="button" onClick={() => onOpen('items')}>
-        소지품 <span className="dock-count">{itemCount}</span>
-        {sig.items !== seen.items && <span className="dock-dot" aria-label="새 소식" />}
-      </button>
-      <button type="button" onClick={() => onOpen('traits')}>
-        능력 <span className="dock-count">{state.traits.length}</span>
-        {sig.traits !== seen.traits && <span className="dock-dot" aria-label="새 소식" />}
-      </button>
+    <nav className="dock" style={{ gridTemplateColumns: `repeat(${shelves.length}, 1fr)` }}>
+      {shelves.map((kind) => (
+        <button key={kind} type="button" onClick={() => onOpen(kind)}>
+          {content.ui[kind].label} <span className="dock-count">{counts[kind]}</span>
+          {sig[kind] !== seen[kind] && <span className="dock-dot" aria-label="새 소식" />}
+        </button>
+      ))}
     </nav>
   );
 }
@@ -33,7 +51,7 @@ export function signatures(state: RunState): Record<SheetKind, string> {
 
 export function ItemList({ content, state }: { content: GameContent; state: RunState }) {
   const items = Object.entries(state.items).filter(([, n]) => n > 0);
-  if (items.length === 0) return <p className="sheet-empty">아무것도 가지고 있지 않다.</p>;
+  if (items.length === 0) return <p className="sheet-empty">{content.ui.items.empty}</p>;
   return (
     <ul className="entry-list">
       {items.map(([id, count]) => {
@@ -53,7 +71,7 @@ export function ItemList({ content, state }: { content: GameContent; state: RunS
 }
 
 export function TraitList({ content, state }: { content: GameContent; state: RunState }) {
-  if (state.traits.length === 0) return <p className="sheet-empty">아직 아무것도 깨닫지 못했다.</p>;
+  if (state.traits.length === 0) return <p className="sheet-empty">{content.ui.traits.empty}</p>;
   return (
     <ul className="entry-list traits">
       {state.traits.map((id) => {

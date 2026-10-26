@@ -1,0 +1,257 @@
+/* 상단: 메뉴 · 파라미터 요약. 누르면 모든 파라미터가 아래로 펼쳐진다.
+   에디터의 모바일 미리보기에서도 그대로 쓰므로 클래스 이름은 모두 hud-로 시작한다 (에디터 CSS와 겹치지 않게). */
+
+.hud-wrap {
+  flex: none;
+  position: relative;
+  font-family: var(--font-sans);
+  color: var(--text);
+}
+.hud-wrap.open {
+  z-index: 15;
+}
+.hud-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: rgba(0, 0, 0, 0.35);
+  animation: hud-fade 0.2s ease both;
+}
+.hud {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 66px;
+  padding: env(safe-area-inset-top) 10px 0 4px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg);
+  font-size: 13px;
+  line-height: 1;
+  transition: background-color 0.8s;
+}
+.hud-menu {
+  flex: none;
+  width: 40px;
+  height: 44px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 11px;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+}
+.hud-menu span {
+  display: block;
+  height: 2px;
+  border-radius: 1px;
+  background: currentColor;
+}
+.hud-summary {
+  flex: 1;
+  min-width: 0;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 4px;
+  border-radius: 4px;
+}
+.hud-summary.expandable {
+  cursor: pointer;
+}
+.hud-summary.expandable:active {
+  background: var(--accent-tint);
+}
+/* 파라미터들: 두 줄까지 줄바꿈해 놓고, 그래도 넘치는 것은 숨겨 "+N"으로 (겹치거나 잘려 보이지 않게) */
+.hud-items {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  max-height: 50px;
+  overflow: hidden;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  align-content: flex-start;
+  gap: 6px 14px;
+}
+.hud-items > .hud-param {
+  height: 22px;
+  max-width: 100%;
+}
+.hud-items > .hud-param.overflow {
+  visibility: hidden;
+}
+.hud-text {
+  flex: 1;
+  min-width: 0;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hud-more {
+  flex: none;
+  padding: 2px 6px;
+  border: 1px solid var(--line-2);
+  border-radius: 9px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.hud-chevron {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin: 0 4px 0 2px;
+  border-right: 1.5px solid var(--muted);
+  border-bottom: 1.5px solid var(--muted);
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 0.2s;
+}
+.hud-chevron.up {
+  transform: translateY(2px) rotate(-135deg);
+}
+.hud-badge {
+  flex: none;
+  font-size: 11px;
+  padding: 3px 6px;
+  border: 1px solid var(--accent-dim);
+  color: var(--accent);
+  border-radius: 2px;
+}
+
+/* 펼친 목록 */
+.hud-panel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  max-height: 60vh;
+  max-height: 60dvh;
+  overflow-y: auto;
+  padding: 4px 16px 8px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line-2);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+  font-size: 13px;
+  line-height: 1.3;
+  animation: hud-drop 0.22s var(--ease) both;
+}
+.hud-row {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.hud-row:last-child {
+  border-bottom: none;
+}
+.hud-row .hud-param {
+  display: flex;
+  width: 100%;
+}
+.hud-row .hud-label {
+  min-width: 5.5em;
+  font-size: 13px;
+  color: var(--text);
+}
+.hud-row .hud-value,
+.hud-row .hud-num,
+.hud-row .hud-cells {
+  margin-left: auto;
+}
+.hud-row .hud-value {
+  max-width: none;
+  white-space: normal;
+  text-align: right;
+}
+.hud-row .hud-bar {
+  max-width: none;
+}
+@keyframes hud-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+@keyframes hud-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+/* 파라미터 하나: 이름 + 값 (수치는 막대/칸/숫자).
+   내용보다 좁게 줄어들지 않게 해서(min-width: auto) 줄 끝에서 겹치지 않고 다음 줄로 넘어가게 한다.
+   상태 글(.hud-value)은 overflow: hidden이라 말줄임으로 줄어들 수 있다 */
+.hud-param {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+.hud-label {
+  flex: none;
+  color: var(--muted);
+  font-size: 11px;
+}
+.hud-num {
+  flex: none;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.hud-num b,
+.hud-value {
+  color: var(--strong);
+  font-weight: 600;
+}
+.hud-value {
+  min-width: 0;
+  max-width: 12em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hud-param.kind-bar {
+  flex: 1 1 110px;
+}
+.hud-cells {
+  flex: none;
+  display: flex;
+  gap: 2px;
+}
+.hud-cell {
+  width: 13px;
+  height: 13px;
+  border: 1px solid var(--blood);
+  transform: rotate(45deg) scale(0.72);
+  transition: background 0.3s;
+}
+.hud-cell.full {
+  background: var(--blood);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--blood) 60%, transparent);
+}
+.hud-bar {
+  position: relative;
+  flex: 1;
+  min-width: 40px;
+  max-width: 220px;
+  height: 6px;
+  background: var(--line);
+  overflow: hidden;
+  border-radius: 1px;
+}
+.hud-bar-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 60%, var(--bg)), var(--accent));
+  transition: width 0.5s;
+}
+.hud-bar-lost {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(45deg, color-mix(in srgb, var(--worse) 35%, var(--bg)) 0 3px, var(--bg-2) 3px 6px);
+  transition: all 0.5s;
+}

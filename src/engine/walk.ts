@@ -66,7 +66,7 @@ export function walkContent(content: GameContent, v: Visitor): void {
   for (const enc of content.encounters) walkEncounter(enc, v);
 }
 
-export type RefKind = 'item' | 'trait' | 'flag' | 'encounter' | 'ending';
+export type RefKind = 'item' | 'trait' | 'flag' | 'param' | 'encounter' | 'ending';
 
 /** 조건/효과/선행관계가 참조하는 id를 종류별로 꺼낸다 */
 export function refsOfCondition(c: Condition): { kind: RefKind; id: string } | null {
@@ -75,6 +75,10 @@ export function refsOfCondition(c: Condition): { kind: RefKind; id: string } | n
     case 'trait':
     case 'flag':
       return { kind: c.type, id: c.id };
+    case 'stat':
+    case 'text':
+    case 'date':
+      return { kind: 'param', id: c.id };
     case 'seen':
       return { kind: 'encounter', id: c.encounterId };
     default:
@@ -88,6 +92,10 @@ export function refsOfEffect(e: Effect): { kind: RefKind; id: string } | null {
     case 'trait':
     case 'flag':
       return { kind: e.type, id: e.id };
+    case 'stat':
+    case 'text':
+    case 'date':
+      return { kind: 'param', id: e.id };
     case 'queue':
       return { kind: 'encounter', id: e.encounterId };
     case 'ending':
@@ -116,20 +124,26 @@ export function findReferences(content: GameContent, kind: RefKind, id: string):
   const startWhere = { encounterId: '', nodeId: null, where: '시작 설정' };
   if (kind === 'item' && content.start.items.some((i) => i.id === id)) found.push(startWhere);
   if (kind === 'trait' && content.start.traits.includes(id)) found.push(startWhere);
+  if (kind === 'ending') {
+    for (const p of content.params) {
+      if (p.kind === 'stat' && p.zeroEnding === id) found.push({ encounterId: '', nodeId: null, where: `파라미터 '${p.name || p.id}' 값이 0이 될 때` });
+    }
+  }
   return found;
 }
 
 /** 모든 참조의 id를 바꾼다 (draft를 직접 수정) */
 export function renameReferences(content: GameContent, kind: RefKind, from: string, to: string): void {
+  const sameKind = (type: string) => type === kind || (kind === 'param' && (type === 'stat' || type === 'text' || type === 'date'));
   walkContent(content, {
     condition(c) {
       if (kind === 'encounter' && c.type === 'seen' && c.encounterId === from) c.encounterId = to;
-      if ((c.type === 'item' || c.type === 'trait' || c.type === 'flag') && c.type === kind && c.id === from) c.id = to;
+      if ('id' in c && sameKind(c.type) && c.id === from) c.id = to;
     },
     effect(e) {
       if (kind === 'encounter' && e.type === 'queue' && e.encounterId === from) e.encounterId = to;
       if (kind === 'ending' && e.type === 'ending' && e.endingId === from) e.endingId = to;
-      if ((e.type === 'item' || e.type === 'trait' || e.type === 'flag') && e.type === kind && e.id === from) e.id = to;
+      if ('id' in e && sameKind(e.type) && e.id === from) e.id = to;
     },
     prerequisite(p) {
       if (kind === 'encounter' && p.encounterId === from) p.encounterId = to;
@@ -137,4 +151,5 @@ export function renameReferences(content: GameContent, kind: RefKind, from: stri
   });
   if (kind === 'item') for (const i of content.start.items) if (i.id === from) i.id = to;
   if (kind === 'trait') content.start.traits = content.start.traits.map((t) => (t === from ? to : t));
+  if (kind === 'ending') for (const p of content.params) if (p.kind === 'stat' && p.zeroEnding === from) p.zeroEnding = to;
 }

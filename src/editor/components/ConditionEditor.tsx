@@ -1,6 +1,8 @@
-import { STAT_LABELS } from '../../engine/describe';
-import type { CompareOp, Condition, ConditionGroup, ConditionType, GameContent, StatKey } from '../../engine/types';
+import { DEFAULT_DATE } from '../../engine/dates';
+import { statUnit } from '../../engine/describe';
+import type { CompareOp, Condition, ConditionGroup, ConditionType, GameContent, ParamKind, StatField } from '../../engine/types';
 import { useEditor } from '../state';
+import { ParamSelect } from './ParamSelect';
 import { RefSelect } from './RefSelect';
 import { IconButton, NumberInput, Segmented } from './ui';
 
@@ -10,10 +12,25 @@ const LEAF_TYPES: { value: Leaf['type']; label: string }[] = [
   { value: 'item', label: '아이템' },
   { value: 'trait', label: '능력' },
   { value: 'stat', label: '수치' },
+  { value: 'text', label: '상태' },
+  { value: 'date', label: '날짜' },
   { value: 'flag', label: '플래그' },
   { value: 'seen', label: '인카운터 겪음' },
   { value: 'turn', label: '진행 순번' },
 ];
+
+const DATE_OPS: { value: CompareOp; label: string }[] = [
+  { value: '>=', label: '부터 (≥)' },
+  { value: '<=', label: '까지 (≤)' },
+  { value: '==', label: '당일 (=)' },
+  { value: '!=', label: '아닌 날 (≠)' },
+  { value: '>', label: '이후 (>)' },
+  { value: '<', label: '이전 (<)' },
+];
+
+function firstParam(content: GameContent, kind: ParamKind): string {
+  return content.params.find((p) => p.kind === kind)?.id ?? '';
+}
 
 const OPS: { value: CompareOp; label: string }[] = [
   { value: '>=', label: '이상 (≥)' },
@@ -33,7 +50,14 @@ export function defaultLeaf(type: Leaf['type'], content: GameContent): Leaf {
     case 'flag':
       return { type, id: content.flags[0]?.id ?? '', op: '==', value: 1 };
     case 'stat':
-      return { type, stat: 'sanity', op: '>=', value: 50 };
+      return { type, id: firstParam(content, 'stat'), field: 'value', op: '>=', value: 1 };
+    case 'text':
+      return { type, id: firstParam(content, 'text'), op: '==', value: '' };
+    case 'date': {
+      const id = firstParam(content, 'date');
+      const p = content.params.find((x) => x.id === id);
+      return { type, id, op: '>=', value: p?.kind === 'date' ? p.value : DEFAULT_DATE };
+    }
     case 'turn':
       return { type, op: '>=', value: 5 };
     case 'seen':
@@ -41,10 +65,10 @@ export function defaultLeaf(type: Leaf['type'], content: GameContent): Leaf {
   }
 }
 
-function OpSelect({ value, onChange }: { value: CompareOp; onChange: (op: CompareOp) => void }) {
+function OpSelect({ value, onChange, options = OPS }: { value: CompareOp; onChange: (op: CompareOp) => void; options?: typeof OPS }) {
   return (
     <select value={value} onChange={(e) => onChange(e.target.value as CompareOp)}>
-      {OPS.map((o) => (
+      {options.map((o) => (
         <option key={o.value} value={o.value}>
           {o.label}
         </option>
@@ -88,15 +112,33 @@ function LeafEditor({ leaf, onChange, onRemove }: { leaf: Leaf; onChange: (c: Le
       case 'stat':
         return (
           <>
-            <select value={leaf.stat} onChange={(e) => onChange({ ...leaf, stat: e.target.value as StatKey })}>
-              {(Object.keys(STAT_LABELS) as StatKey[]).map((k) => (
-                <option key={k} value={k}>
-                  {STAT_LABELS[k]}
-                </option>
-              ))}
+            <ParamSelect kind="stat" value={leaf.id} onChange={(id) => onChange({ ...leaf, id })} />
+            <select value={leaf.field} onChange={(e) => onChange({ ...leaf, field: e.target.value as StatField })}>
+              <option value="value">현재값</option>
+              <option value="max">최대값</option>
             </select>
             <NumberInput value={leaf.value} onChange={(v) => onChange({ ...leaf, value: v ?? 0 })} width={48} />
+            {statUnit(content, leaf.id) && <span className="unit">{statUnit(content, leaf.id)}</span>}
             <OpSelect value={leaf.op} onChange={(op) => onChange({ ...leaf, op })} />
+          </>
+        );
+      case 'text':
+        return (
+          <>
+            <ParamSelect kind="text" value={leaf.id} onChange={(id) => onChange({ ...leaf, id })} />
+            <input className="text-value" value={leaf.value} placeholder="(빈 값)" onChange={(e) => onChange({ ...leaf, value: e.target.value })} />
+            <select value={leaf.op} onChange={(e) => onChange({ ...leaf, op: e.target.value as '==' | '!=' })}>
+              <option value="==">같음 (=)</option>
+              <option value="!=">다름 (≠)</option>
+            </select>
+          </>
+        );
+      case 'date':
+        return (
+          <>
+            <ParamSelect kind="date" value={leaf.id} onChange={(id) => onChange({ ...leaf, id })} />
+            <input type="date" value={leaf.value} onChange={(e) => e.target.value && onChange({ ...leaf, value: e.target.value })} />
+            <OpSelect value={leaf.op} options={DATE_OPS} onChange={(op) => onChange({ ...leaf, op })} />
           </>
         );
       case 'turn':

@@ -1,4 +1,4 @@
-import { flagName, itemName, traitName } from '../engine/describe';
+import { flagName, itemName, paramName, traitName } from '../engine/describe';
 import type { Condition, GameContent, Prerequisite } from '../engine/types';
 import { walkEncounter } from '../engine/walk';
 
@@ -6,7 +6,7 @@ import { walkEncounter } from '../engine/walk';
 //  after: 선행 인카운터 (출현 설정)
 //  queue: 결과 효과의 '인카운터 예약'
 //  seen : 출현 조건의 '인카운터 겪음'
-//  state: A가 바꾸는 아이템/능력/플래그를 B의 출현 조건이 검사
+//  state: A가 바꾸는 아이템/능력/플래그/파라미터를 B의 출현 조건이 검사
 
 export type RelationKind = 'after' | 'queue' | 'seen' | 'state';
 
@@ -39,13 +39,14 @@ export function buildRelations(content: GameContent): Relation[] {
     out.push(r);
   };
 
-  // 각 인카운터가 바꾸는 상태 (아이템/능력/플래그)
+  // 각 인카운터가 바꾸는 상태 (아이템/능력/플래그/파라미터)
   const writes = new Map<string, Set<string>>();
   for (const enc of content.encounters) {
     const set = new Set<string>();
     walkEncounter(enc, {
       effect(e, loc) {
         if (e.type === 'item' || e.type === 'trait' || e.type === 'flag') set.add(`${e.type}:${e.id}`);
+        if (e.type === 'stat' || e.type === 'text' || e.type === 'date') set.add(`param:${e.id}`);
         if (e.type === 'queue' && e.encounterId) {
           push({
             from: enc.id,
@@ -69,9 +70,17 @@ export function buildRelations(content: GameContent): Relation[] {
       if (c.type === 'seen' && c.encounterId) {
         push({ from: c.encounterId, to: enc.id, kind: 'seen', label: c.has ? '겪었으면' : '안 겪었으면' });
       }
-      if (c.type === 'item' || c.type === 'trait' || c.type === 'flag') {
-        const key = `${c.type}:${c.id}`;
-        const name = c.type === 'item' ? itemName(content, c.id) : c.type === 'trait' ? traitName(content, c.id) : flagName(content, c.id);
+      if (c.type === 'item' || c.type === 'trait' || c.type === 'flag' || c.type === 'stat' || c.type === 'text' || c.type === 'date') {
+        const isParam = c.type === 'stat' || c.type === 'text' || c.type === 'date';
+        const key = isParam ? `param:${c.id}` : `${c.type}:${c.id}`;
+        const name =
+          c.type === 'item'
+            ? itemName(content, c.id)
+            : c.type === 'trait'
+              ? traitName(content, c.id)
+              : c.type === 'flag'
+                ? flagName(content, c.id)
+                : paramName(content, c.id);
         for (const [from, set] of writes) {
           if (from !== enc.id && set.has(key)) push({ from, to: enc.id, kind: 'state', label: name });
         }

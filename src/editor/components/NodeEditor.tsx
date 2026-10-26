@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { isEmptyCondition } from '../../engine/conditions';
 import { createBranch, createChoice, createOutcome, uid } from '../../engine/content';
 import { conditionTags } from '../../engine/describe';
@@ -289,6 +290,7 @@ export function NodeEditor({
 }) {
   const { content } = useEditor();
   const isStart = ops.enc.start === node.id;
+  const [choicesOpen, setChoicesOpen] = useState(true);
 
   const rename = (to: string): string | null => {
     if (!to.trim()) return '페이지 id를 입력하세요';
@@ -437,7 +439,24 @@ export function NodeEditor({
             </div>
           </div>
 
-          <div className="choices-editor">
+          <button
+            type="button"
+            className={`choices-toggle ${choicesOpen ? 'open' : ''}`}
+            aria-expanded={choicesOpen}
+            onClick={() => setChoicesOpen((v) => !v)}
+            title={choicesOpen ? '선택지 목록 접기' : '선택지 목록 펼치기'}
+          >
+            <span className="choices-caret" aria-hidden>
+              ▾
+            </span>
+            선택지 <span className="choices-count">{node.choices.length}</span>
+            {!choicesOpen && node.choices.length > 0 && (
+              <span className="choices-summary">
+                {node.choices.map((c, i) => `${i + 1}. ${stripMarkup(c.text) || '(문구 없음)'}`).join('   ')}
+              </span>
+            )}
+          </button>
+          <div className="choices-editor" hidden={!choicesOpen}>
             {node.choices.map((c, i) => (
               <ChoiceEditor
                 key={c.id}

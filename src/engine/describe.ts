@@ -1,14 +1,9 @@
+import { swatchLabel } from './colors';
 import { evaluate } from './conditions';
-import type { CompareOp, Condition, Effect, Encounter, GameContent, RunState, StatKey } from './types';
+import { formatDate } from './dates';
+import type { CompareOp, Condition, DateParam, Effect, Encounter, GameContent, ParamDef, RunState, StatField } from './types';
 
 // 조건/효과/출현 규칙을 사람이 읽을 수 있는 한국어로 바꾼다. 게임(선택지 태그)과 에디터(요약) 모두 사용.
-
-export const STAT_LABELS: Record<StatKey, string> = {
-  hp: '체력',
-  maxHp: '최대 체력',
-  sanity: '정신력',
-  maxSanity: '최대 정신력',
-};
 
 export const OP_LABELS: Record<CompareOp, string> = {
   '>=': '이상',
@@ -27,6 +22,60 @@ const TURN_OP_LABELS: Record<CompareOp, string> = {
   '>': ' 다음부터',
   '<': ' 전까지',
 };
+
+const DATE_OP_LABELS: Record<CompareOp, string> = {
+  '>=': '부터',
+  '<=': '까지',
+  '==': '',
+  '!=': '이 아님',
+  '>': ' 이후',
+  '<': ' 이전',
+};
+
+export const PARAM_KIND_LABELS: Record<ParamDef['kind'], string> = {
+  stat: '수치',
+  text: '상태',
+  date: '캘린더',
+};
+
+export function findParam(content: GameContent, id: string): ParamDef | undefined {
+  return content.params.find((p) => p.id === id);
+}
+
+export function paramName(content: GameContent, id: string): string {
+  return findParam(content, id)?.name || id || '(파라미터 없음)';
+}
+
+/** "정신력" / "최대 정신력" */
+export function statLabel(content: GameContent, id: string, field: StatField): string {
+  return field === 'max' ? `최대 ${paramName(content, id)}` : paramName(content, id);
+}
+
+/** 수치 파라미터의 단위 (없으면 '') */
+export function statUnit(content: GameContent, id: string): string {
+  const p = findParam(content, id);
+  return p?.kind === 'stat' ? (p.unit ?? '') : '';
+}
+
+/** 화면에 보일 값: "2/3", "500원", "중독", "1931년 12월 1일" */
+export function paramValueText(p: ParamDef, state: RunState): string {
+  switch (p.kind) {
+    case 'stat': {
+      const s = state.stats[p.id] ?? { value: p.value, max: p.max };
+      const unit = p.unit ?? '';
+      return s.max == null ? `${s.value}${unit}` : `${s.value}/${s.max}${unit}`;
+    }
+    case 'text':
+      return state.texts[p.id] ?? p.value;
+    case 'date':
+      return formatDate(state.dates[p.id] ?? p.value, p.parts);
+  }
+}
+
+function dateText(content: GameContent, id: string, date: string): string {
+  const p = findParam(content, id);
+  return formatDate(date, p?.kind === 'date' ? (p as DateParam).parts : undefined);
+}
 
 export function itemName(content: GameContent, id: string): string {
   return content.items.find((i) => i.id === id)?.name || id || '(아이템 없음)';
@@ -48,8 +97,8 @@ export function endingTitle(content: GameContent, id: string): string {
   return content.endings.find((e) => e.id === id)?.title || id || '(엔딩 없음)';
 }
 
-function cmp(value: number, op: CompareOp): string {
-  return op === '==' ? `${value}` : `${value} ${OP_LABELS[op]}`;
+function cmp(value: number, op: CompareOp, unit = ''): string {
+  return op === '==' ? `${value}${unit}` : `${value}${unit} ${OP_LABELS[op]}`;
 }
 
 export function describeCondition(content: GameContent, c: Condition | null | undefined): string {
@@ -76,7 +125,11 @@ export function describeCondition(content: GameContent, c: Condition | null | un
     case 'flag':
       return `${flagName(content, c.id)} ${c.op === '==' ? '= ' + c.value : cmp(c.value, c.op)}`;
     case 'stat':
-      return `${STAT_LABELS[c.stat]} ${cmp(c.value, c.op)}`;
+      return `${statLabel(content, c.id, c.field)} ${cmp(c.value, c.op, statUnit(content, c.id))}`;
+    case 'text':
+      return `${paramName(content, c.id)}: ${c.value || '(빈 값)'}${c.op === '!=' ? ' 아님' : ''}`;
+    case 'date':
+      return `${paramName(content, c.id)} ${dateText(content, c.id, c.value)}${DATE_OP_LABELS[c.op]}`;
     case 'turn':
       return `${c.value}번째 인카운터${TURN_OP_LABELS[c.op]}`;
     case 'seen':
@@ -110,8 +163,16 @@ export function describeEffect(content: GameContent, e: Effect): string {
     case 'stat': {
       const range =
         e.valueMax != null && e.valueMax !== e.value ? `${signed(e.value)}~${signed(e.valueMax)}` : signed(e.value);
-      return `${STAT_LABELS[e.stat]} ${range}`;
+      return `${statLabel(content, e.id, e.field)} ${range}${statUnit(content, e.id)}`;
     }
+    case 'text':
+      return `${paramName(content, e.id)} → ${e.value || '(빈 값)'}`;
+    case 'date':
+      return e.mode === 'set'
+        ? `${paramName(content, e.id)} → ${dateText(content, e.id, e.date)}`
+        : `${paramName(content, e.id)} ${signed(e.days)}일`;
+    case 'theme':
+      return `색 변경: 배경 ${e.background ? swatchLabel(e.background) : '기본'} · 글자 ${e.text ? swatchLabel(e.text) : '기본'}`;
     case 'item':
       return `${itemName(content, e.id)} ${signed(e.value)}`;
     case 'trait':

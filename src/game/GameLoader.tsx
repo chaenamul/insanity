@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { isStateCompatible, newRun } from '../engine/run';
+import { normalizeContent } from '../engine/content';
+import { isStateCompatible, newRun, syncRunState } from '../engine/run';
 import type { GameContent, RunState } from '../engine/types';
 import { api, ApiError, idFromPath, redirectToLogin } from '../shared/api';
 import type { PlayStoryResponse, SaveResponse } from '../shared/api-types';
@@ -31,7 +32,7 @@ export function GameLoader() {
       }
       // 같은 테스트 탭을 새로고침하면 이어서, 에디터에서 새로 열면 처음부터
       const saved = readStorage<PlaytestSave>(STORAGE_KEYS.playtestRun);
-      const resumed = saved && saved.token === token && isStateCompatible(content, saved.state) ? saved.state : null;
+      const resumed = saved && saved.token === token && isStateCompatible(content, saved.state) ? syncRunState(content, saved.state) : null;
       setState({
         status: 'ready',
         content,
@@ -45,12 +46,14 @@ export function GameLoader() {
 
     Promise.all([api<PlayStoryResponse>(`/stories/${storyId}`), api<SaveResponse>(`/stories/${storyId}/save`)])
       .then(([story, save]) => {
-        document.title = story.content.meta.title || document.title;
+        // 예전 형식으로 공개된 이야기와 저장도 지금 형식으로 맞춘다
+        const content = normalizeContent(story.content);
+        document.title = content.meta.title || document.title;
         setState({
           status: 'ready',
-          content: story.content,
+          content,
           saver: createRemoteSaver(storyId),
-          savedRun: save.state,
+          savedRun: save.state ? syncRunState(content, save.state) : null,
           initialRun: null,
           isPlaytest: false,
         });

@@ -3,7 +3,9 @@ import type { SpawnMode } from '../../engine/types';
 import type { RefKind } from '../../engine/walk';
 import { useEditor } from '../state';
 
-const LABELS: Record<RefKind, string> = {
+type SelectKind = Exclude<RefKind, 'param'>;
+
+const LABELS: Record<SelectKind, string> = {
   item: '아이템',
   trait: '능력',
   flag: '플래그',
@@ -13,7 +15,7 @@ const LABELS: Record<RefKind, string> = {
 
 const CREATE = '__create__';
 
-/** 아이템/능력/플래그/인카운터/엔딩 선택. 목록 맨 아래에서 바로 새로 만들 수 있다 */
+/** 아이템/능력/플래그/인카운터/엔딩 선택. 목록 맨 아래에서 바로 새로 만들 수 있다 (파라미터는 ParamSelect) */
 export function RefSelect({
   kind,
   value,
@@ -21,7 +23,7 @@ export function RefSelect({
   newEncounterMode = 'random',
   exclude,
 }: {
-  kind: RefKind;
+  kind: SelectKind;
   value: string;
   onChange: (id: string) => void;
   /** 여기서 새 인카운터를 만들 때의 출현 방식 (예약 효과에서는 후속 전용) */

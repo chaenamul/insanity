@@ -29,6 +29,7 @@
       ]
     }
   },
+  "startColors": null,
   "start": "start",
   "nodes": [
     {
@@ -105,7 +106,8 @@
                   "effects": [
                     {
                       "type": "stat",
-                      "stat": "hp",
+                      "id": "hp",
+                      "field": "value",
                       "value": -1,
                       "valueMax": null
                     }

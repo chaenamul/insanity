@@ -13,6 +13,7 @@
     "after": [],
     "condition": null
   },
+  "startColors": null,
   "start": "start",
   "nodes": [
     {
@@ -132,13 +133,15 @@
                   "effects": [
                     {
                       "type": "stat",
-                      "stat": "maxSanity",
+                      "id": "sanity",
+                      "field": "max",
                       "value": -10,
                       "valueMax": null
                     },
                     {
                       "type": "stat",
-                      "stat": "sanity",
+                      "id": "sanity",
+                      "field": "value",
                       "value": -5,
                       "valueMax": null
                     },
@@ -193,7 +196,8 @@
                   "effects": [
                     {
                       "type": "stat",
-                      "stat": "sanity",
+                      "id": "sanity",
+                      "field": "value",
                       "value": -3,
                       "valueMax": null
                     }

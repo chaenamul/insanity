@@ -1,25 +1,5 @@
 /* 게임 화면 — 모바일 우선. 화면 전체는 스크롤되지 않고, 본문/선택지 영역 안에서만 스크롤된다. */
 
-:root {
-  --bg: #0b0d0c;
-  --bg-2: #101312;
-  --panel: #151a18;
-  --line: #242c29;
-  --line-2: #34403b;
-  --text: #d6d2c4;
-  --muted: #7d847f;
-  --accent: #7fb3a0;
-  --accent-dim: #3c5c51;
-  --choice: #c9ddd4;
-  --blood: #b33a3a;
-  --good: #79b97a;
-  --bad: #d06a5a;
-  --worse: #a35bc4;
-  --font-serif: 'Noto Serif KR', 'Nanum Myeongjo', 'Batang', serif;
-  --font-sans: -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans KR', sans-serif;
-  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
 * {
   box-sizing: border-box;
 }
@@ -32,12 +12,33 @@ body {
   color: var(--text);
   font-family: var(--font-serif);
   line-height: 1.75;
+  /* 가변 색상으로 색이 바뀔 때 천천히 */
+  transition:
+    background-color 0.8s,
+    color 0.8s;
+}
+.theme-instant,
+.theme-instant * {
+  transition: none !important;
 }
 body {
   overflow: hidden;
   overscroll-behavior: none;
   -webkit-tap-highlight-color: transparent;
   -webkit-text-size-adjust: 100%;
+  /* 플레이 화면은 글자 선택(드래그)·길게 눌러 메뉴 띄우기를 막는다. 입력칸(디버그 패널)만 예외 */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+input,
+textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+img,
+a {
+  -webkit-user-drag: none;
 }
 #root {
   height: 100%;
@@ -64,7 +65,7 @@ button {
 }
 .btn.primary {
   border-color: var(--accent-dim);
-  background: rgba(127, 179, 160, 0.08);
+  background: var(--accent-tint);
 }
 
 /* ── 타이틀 ── */
@@ -75,7 +76,7 @@ button {
   display: grid;
   place-items: center;
   padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
-  background: radial-gradient(ellipse at 50% 120%, #10231d 0%, var(--bg) 60%);
+  background: radial-gradient(ellipse at 50% 120%, color-mix(in srgb, var(--accent) 14%, var(--bg)) 0%, var(--bg) 60%);
 }
 .title-back {
   position: fixed;
@@ -113,8 +114,8 @@ a.menu-item {
   padding-left: 0.25em;
   margin: 0;
   font-weight: 700;
-  color: #e8e3d3;
-  text-shadow: 0 0 24px rgba(127, 179, 160, 0.25);
+  color: var(--strong);
+  text-shadow: 0 0 24px color-mix(in srgb, var(--accent) 25%, transparent);
 }
 .subtitle {
   color: var(--accent);
@@ -123,7 +124,7 @@ a.menu-item {
 }
 .intro {
   text-align: left;
-  color: #bdb8aa;
+  color: var(--soft);
   border-left: 2px solid var(--accent-dim);
   padding-left: 16px;
   margin-bottom: 32px;
@@ -159,106 +160,7 @@ a.menu-item {
   flex-direction: column;
   overflow: hidden;
   background: var(--bg);
-}
-
-/* 상단: 메뉴 · 체력 · 정신력 한 줄 */
-.hud {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-height: 44px;
-  padding: env(safe-area-inset-top) 12px 0 4px;
-  border-bottom: 1px solid var(--line);
-  font-family: var(--font-sans);
-  font-size: 13px;
-  line-height: 1;
-}
-.hud-menu {
-  flex: none;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 4px;
-  padding: 0 11px;
-  background: none;
-  border: none;
-  cursor: pointer;
-}
-.hud-menu span {
-  display: block;
-  height: 2px;
-  border-radius: 1px;
-  background: currentColor;
-}
-.hud-hp {
-  flex: none;
-  display: flex;
-  gap: 2px;
-}
-.hp-cell {
-  width: 13px;
-  height: 13px;
-  border: 1px solid var(--blood);
-  transform: rotate(45deg) scale(0.72);
-  transition: background 0.3s;
-}
-.hp-cell.full {
-  background: var(--blood);
-  box-shadow: 0 0 6px rgba(179, 58, 58, 0.6);
-}
-.hud-sanity {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.hud-label {
-  color: var(--muted);
-  font-size: 11px;
-  flex: none;
-}
-.sanity-bar {
-  position: relative;
-  flex: 1;
-  max-width: 220px;
-  height: 6px;
-  background: #1d2421;
-  overflow: hidden;
-  border-radius: 1px;
-}
-.sanity-fill {
-  position: absolute;
-  inset: 0 auto 0 0;
-  background: linear-gradient(90deg, #4b7d6b, var(--accent));
-  transition: width 0.5s;
-}
-.sanity-lost {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  background: repeating-linear-gradient(45deg, #3a1f44 0 3px, #120c15 3px 6px);
-  transition: all 0.5s;
-}
-.sanity-text {
-  flex: none;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-}
-.sanity-text b {
-  color: #e8e3d3;
-  font-weight: 600;
-}
-.hud-badge {
-  flex: none;
-  font-size: 11px;
-  padding: 3px 6px;
-  border: 1px solid var(--accent-dim);
-  color: var(--accent);
-  border-radius: 2px;
+  transition: background-color 0.8s;
 }
 
 /* 가운데: 본문은 위에서부터, 선택지는 본문 바로 아래.
@@ -371,6 +273,27 @@ a.menu-item {
   margin: 0 0 0.75em;
   animation: fade-in 0.6s ease both;
 }
+
+/* 타이핑 효과: 아직 차례가 오지 않은 것은 자리만 차지하고(.ty-wait), 차례가 되면 나타난다.
+   타이핑을 켜면 문단 페이드 대신 글자가 하나씩 나오므로, 효과 알림은 하나씩 페이드로 나온다 */
+/* 본문 영역 전체(빈 곳 포함)를 눌러 타이핑을 건너뛸 수 있도록 .page를 가득 채운다 */
+.encounter-view {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.typing-on .passage p,
+.typing-on .effects {
+  animation: none;
+}
+.typing-on .chip {
+  animation: fade-in 0.4s ease both;
+}
+.ty-wait {
+  visibility: hidden;
+  animation: none !important;
+}
 .chosen {
   margin: 1em 0 0.5em;
   color: var(--accent);
@@ -403,7 +326,7 @@ a.menu-item {
 }
 .tone-worse {
   color: var(--worse);
-  background: rgba(163, 91, 196, 0.1);
+  background: color-mix(in srgb, var(--worse) 10%, transparent);
 }
 .tone-neutral {
   color: var(--muted);
@@ -443,13 +366,13 @@ a.menu-item {
 }
 .choice:hover:not(:disabled),
 .choice:active:not(:disabled) {
-  background: rgba(127, 179, 160, 0.09);
+  background: var(--accent-tint);
   border-left-color: var(--accent);
 }
 .choice.locked {
   cursor: not-allowed;
   color: var(--muted);
-  border-left-color: #4a2a2a;
+  border-left-color: color-mix(in srgb, var(--bad) 30%, var(--bg));
 }
 .choice .tag {
   font-weight: 600;
@@ -497,7 +420,8 @@ a.menu-item {
 }
 .ending-summary {
   display: flex;
-  gap: 28px;
+  flex-wrap: wrap;
+  gap: 14px 28px;
   margin: 1.6em 0 0;
   font-family: var(--font-sans);
 }
@@ -651,7 +575,7 @@ a.menu-item {
 }
 .entry-name {
   font-size: 16px;
-  color: #e8e3d3;
+  color: var(--strong);
 }
 .entry-list.traits .entry-name {
   color: var(--accent);
@@ -730,6 +654,58 @@ a.menu-item {
   background: var(--bg);
   border-left: 2px solid var(--accent-dim);
   line-height: 1.7;
+}
+.font-sample p {
+  margin: 0;
+}
+.typing-sample {
+  position: relative;
+}
+.typing-sample .font-sample {
+  padding-right: 36px;
+}
+.replay-btn {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  width: 30px;
+  height: 30px;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 16px;
+  cursor: pointer;
+}
+.replay-btn:hover {
+  color: var(--accent);
+}
+.menu-hint-text {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.menu-segmented {
+  display: flex;
+  border: 1px solid var(--line-2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.menu-segmented button {
+  flex: 1;
+  padding: 9px 4px;
+  background: none;
+  border: none;
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+}
+.menu-segmented button + button {
+  border-left: 1px solid var(--line-2);
+}
+.menu-segmented button.active {
+  background: var(--accent-tint);
+  color: var(--accent);
 }
 .menu-item {
   display: flex;
@@ -914,9 +890,11 @@ a.menu-item {
   width: 64px;
   padding: 2px 4px;
 }
-.debug-row select {
+.debug-row select,
+.debug-row input.wide {
   width: auto;
   flex: 1;
+  min-width: 0;
 }
 .debug-row .num {
   min-width: 24px;
@@ -952,7 +930,7 @@ a.menu-item {
 }
 .spawn-forced .spawn-title,
 .spawn-queued .spawn-title {
-  color: #e2b85c;
+  color: var(--warm);
 }
 .spawn-current .spawn-title {
   color: var(--accent);

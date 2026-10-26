@@ -1,7 +1,10 @@
+import { contrastRatio } from './colors';
 import { isEmptyCondition } from './conditions';
+import { isValidDate } from './dates';
+import { PARAM_KIND_LABELS } from './describe';
 import { findMarkupProblems } from '../markup/parse';
 import { ID_PATTERN } from './content';
-import type { GameContent } from './types';
+import type { Condition, Effect, GameContent, ParamKind } from './types';
 import { refsOfCondition, refsOfEffect, walkEncounter, type RefKind } from './walk';
 
 export type Severity = 'error' | 'warning';
@@ -21,9 +24,15 @@ const KIND_LABELS: Record<RefKind, string> = {
   item: '아이템',
   trait: '능력',
   flag: '플래그',
+  param: '파라미터',
   encounter: '인카운터',
   ending: '엔딩',
 };
+
+/** 이 조건/효과가 요구하는 파라미터 종류 */
+function paramKindOf(x: Condition | Effect): ParamKind | null {
+  return x.type === 'stat' || x.type === 'text' || x.type === 'date' ? x.type : null;
+}
 
 function duplicates(ids: string[]): string[] {
   const seen = new Set<string>();
@@ -45,15 +54,18 @@ export function validateContent(content: GameContent, options: ValidateOptions =
     item: new Set(content.items.map((i) => i.id)),
     trait: new Set(content.traits.map((t) => t.id)),
     flag: new Set(content.flags.map((f) => f.id)),
+    param: new Set(content.params.map((p) => p.id)),
     encounter: new Set(content.encounters.map((e) => e.id)),
     ending: new Set(content.endings.map((e) => e.id)),
   };
+  const paramKinds = new Map(content.params.map((p) => [p.id, p]));
 
   // ── 정의 ──
   const defLists: [RefKind, { id: string; name?: string; title?: string }[], Issue['tab']][] = [
     ['item', content.items, 'definitions'],
     ['trait', content.traits, 'definitions'],
     ['flag', content.flags, 'definitions'],
+    ['param', content.params, 'settings'],
     ['ending', content.endings, 'endings'],
   ];
   for (const [kind, list, tab] of defLists) {
@@ -70,6 +82,25 @@ export function validateContent(content: GameContent, options: ValidateOptions =
   }
   for (const t of content.start.traits) {
     if (!known.trait.has(t)) issues.push({ severity: 'error', message: `시작 능력 '${t}'가 정의되지 않았습니다`, tab: 'settings' });
+  }
+
+  // ── 파라미터 · 화면 ──
+  const setting = (message: string, severity: Severity = 'warning') => issues.push({ severity, message, tab: 'settings' });
+  for (const p of content.params) {
+    const name = p.name || p.id;
+    if (p.kind === 'stat') {
+      if (p.zeroEnding && !known.ending.has(p.zeroEnding)) setting(`'${name}' 값이 0이 될 때의 엔딩 '${p.zeroEnding}'가 없습니다`, 'error');
+      if (p.zeroEnding && p.value <= 0) setting(`'${name}'의 시작 값이 0이라 시작하자마자 엔딩에 도달합니다`);
+      if (p.max != null && p.value > p.max) setting(`'${name}'의 시작 값이 최대값보다 커서 최대값으로 맞춰집니다`);
+      if (p.max == null && p.display !== 'number') setting(`'${name}'에는 최대값이 없어 막대/칸 대신 숫자로 표시됩니다`);
+      if (p.mood && p.max == null) setting(`'${name}'에는 최대값이 없어 화면 효과(어두워짐)가 동작하지 않습니다`);
+    }
+    if (p.kind === 'date' && !isValidDate(p.value)) setting(`'${name}'의 시작 날짜가 올바르지 않습니다`, 'error');
+    if (p.kind === 'date' && !Object.values(p.parts).some(Boolean)) setting(`'${name}'에 보여줄 정보(연/월/일/요일)가 하나도 없습니다`);
+  }
+  if (content.ui.hud.summary === 'text' && !content.ui.hud.text.trim()) setting('상단에 보일 문구가 비어 있습니다');
+  if (contrastRatio(content.theme.background, content.theme.text) < 3) {
+    setting('배경색과 글자색의 차이가 작아 글이 잘 보이지 않을 수 있습니다');
   }
 
   // ── 인카운터 id ──
@@ -139,9 +170,21 @@ export function validateContent(content: GameContent, options: ValidateOptions =
     const at = (message: string, severity: Severity = 'error', nodeId: string | null = null, where?: string): void => {
       issues.push({ severity, message, encounterId: enc.id, nodeId, where });
     };
+    /** 수치 조건이 상태 파라미터를 가리키는 등 종류가 맞지 않는 경우 */
+    const checkParamKind = (x: Condition | Effect, id: string, what: string, nodeId: string | null, where: string): void => {
+      const want = paramKindOf(x);
+      const p = paramKinds.get(id);
+      if (!want || !p) return;
+      if (p.kind !== want) {
+        at(`이 ${what}에는 ${PARAM_KIND_LABELS[want]} 파라미터가 필요하지만 '${p.name || id}'는 ${PARAM_KIND_LABELS[p.kind]}입니다`, 'error', nodeId, where);
+      } else if (p.kind === 'stat' && 'field' in x && x.field === 'max' && p.max == null) {
+        at(`'${p.name || id}'에는 최대값이 없습니다 (최대값 ${what})`, 'warning', nodeId, where);
+      }
+    };
     const s = enc.spawn;
 
     if (!enc.title.trim()) at('제목이 비어 있습니다', 'warning');
+    if (enc.startColors && !content.theme.variable) at('가변 색상이 꺼져 있어 인카운터 시작 시 색 변경이 무시됩니다 (기본 설정 탭의 테마)', 'warning');
     if (s.mode === 'random' && s.weight <= 0) at('가중치가 0 이하라서 랜덤으로 뽑히지 않습니다', 'warning');
     if (s.mode === 'triggered' && !queued.has(enc.id)) {
       at('후속 전용인데 이 인카운터를 예약하는 효과가 없어 등장할 방법이 없습니다', 'warning');
@@ -215,15 +258,20 @@ export function validateContent(content: GameContent, options: ValidateOptions =
         if (!r) return;
         if (!r.id) at(`조건의 ${KIND_LABELS[r.kind]}가 선택되지 않았습니다`, 'error', loc.nodeId, loc.where);
         else if (!known[r.kind].has(r.id)) at(`조건이 없는 ${KIND_LABELS[r.kind]} '${r.id}'를 참조합니다`, 'error', loc.nodeId, loc.where);
+        else checkParamKind(c, r.id, '조건', loc.nodeId, loc.where);
       },
       text(text, loc) {
         for (const problem of markupProblems(text)) at(`서식 오류: ${problem}`, 'warning', loc.nodeId, loc.where);
       },
       effect(e, loc) {
+        if (e.type === 'theme' && !content.theme.variable) {
+          at('가변 색상이 꺼져 있어 색 변경 효과가 무시됩니다 (기본 설정 탭의 테마)', 'warning', loc.nodeId, loc.where);
+        }
         const r = refsOfEffect(e);
         if (!r) return;
         if (!r.id) at(`효과의 ${KIND_LABELS[r.kind]}가 선택되지 않았습니다`, 'error', loc.nodeId, loc.where);
         else if (!known[r.kind].has(r.id)) at(`효과가 없는 ${KIND_LABELS[r.kind]} '${r.id}'를 참조합니다`, 'error', loc.nodeId, loc.where);
+        else checkParamKind(e, r.id, '효과', loc.nodeId, loc.where);
       },
     });
   }

@@ -4,6 +4,7 @@ import { describeSpawn } from '../../engine/describe';
 import type { Encounter } from '../../engine/types';
 import { findReferences, renameReferences } from '../../engine/walk';
 import { child, useEditor, useEncounterEdit } from '../state';
+import { ThemeColorsFields } from './ColorPicker';
 import { IdInput } from './IdInput';
 import { NodeEditor } from './NodeEditor';
 import { SpawnEditor } from './SpawnEditor';
@@ -143,6 +144,26 @@ export function EncounterEditor({ enc }: { enc: Encounter }) {
       />
 
       <SpawnEditor enc={enc} edit={edit} />
+
+      {(content.theme.variable || enc.startColors) && (
+        <section className="card enc-colors">
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={!!enc.startColors}
+              onChange={(e) => edit((x) => void (x.startColors = e.target.checked ? { background: content.theme.background, text: content.theme.text } : null))}
+            />
+            <b>인카운터가 시작될 때 색 바꾸기</b>
+            <span className="help">가변 색상 · 시작 페이지의 진입 효과보다 먼저 적용</span>
+          </label>
+          {enc.startColors && (
+            <div className="effect-row">
+              <ThemeColorsFields value={enc.startColors} onChange={(colors) => edit((x) => void (x.startColors = colors))} />
+            </div>
+          )}
+          {!content.theme.variable && <p className="warn-text">가변 색상이 꺼져 있어 적용되지 않습니다 (기본 설정 탭의 테마)</p>}
+        </section>
+      )}
 
       <div className="page-nav">
         <span className="muted">페이지</span>

@@ -1,0 +1,41 @@
+/* 게임 화면 색. 배경(--bg)과 글자(--text) 두 가지로 정하고, 나머지는 두 색을 섞어 만든다.
+   게임에서는 html.game-colors에, 에디터의 상단 미리보기에서는 미리보기 상자에 붙는다.
+   theme.ts가 이야기/플레이어 설정에 따라 두 색을 덮어쓰고, 밝은 배경이면 .theme-light를 붙인다. */
+.game-colors {
+  --bg: #0b0d0c;
+  --text: #d6d2c4;
+  /* 강조색 (어두운 배경 기준) */
+  --accent: #7fb3a0;
+  --blood: #b33a3a;
+  --good: #79b97a;
+  --bad: #d06a5a;
+  --worse: #a35bc4;
+  --warm: #e2b85c;
+  /* 가장 또렷한 글자를 만들 때 섞는 색 */
+  --contrast: #fff;
+
+  --bg-2: color-mix(in srgb, var(--text) 3%, var(--bg));
+  --panel: color-mix(in srgb, var(--text) 6%, var(--bg));
+  --line: color-mix(in srgb, var(--text) 13%, var(--bg));
+  --line-2: color-mix(in srgb, var(--text) 21%, var(--bg));
+  --muted: color-mix(in srgb, var(--text) 55%, var(--bg));
+  --soft: color-mix(in srgb, var(--text) 86%, var(--bg));
+  --strong: color-mix(in srgb, var(--text) 75%, var(--contrast));
+  --accent-dim: color-mix(in srgb, var(--accent) 45%, var(--bg));
+  --accent-tint: color-mix(in srgb, var(--accent) 9%, transparent);
+  --choice: color-mix(in srgb, var(--strong) 70%, var(--accent));
+
+  --font-serif: 'Noto Serif KR', 'Nanum Myeongjo', 'Batang', serif;
+  --font-sans: -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans KR', sans-serif;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+/* 밝은 배경: 강조색을 진하게 */
+.game-colors.theme-light {
+  --accent: #2e6e5b;
+  --blood: #a12a2a;
+  --good: #2f7a33;
+  --bad: #b23d2c;
+  --worse: #7a3a9c;
+  --warm: #93650c;
+  --contrast: #000;
+}

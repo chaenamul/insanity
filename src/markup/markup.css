@@ -18,6 +18,24 @@
 .fx-color--gold {
   color: #c9a85c;
 }
+/* 밝은 배경에서는 같은 색을 진하게 (게임 화면의 html.theme-light, 에디터의 상단 미리보기) */
+.theme-light .fx-color--blood {
+  color: #a8281f;
+}
+.theme-light .fx-color--abyss {
+  color: #1f7a5a;
+  text-shadow: none;
+}
+.theme-light .fx-color--void {
+  color: #6c3fa5;
+}
+.theme-light .fx-color--pale {
+  color: color-mix(in srgb, currentColor 45%, transparent);
+  opacity: 1;
+}
+.theme-light .fx-color--gold {
+  color: #8a6a1c;
+}
 
 /* ── 희미하게 ── */
 .fx-faint {
@@ -26,16 +44,16 @@
   text-shadow: 0 0 6px currentColor;
 }
 
-/* ── 떨림: 평소엔 가만히 있다가 가끔 글자마다 다른 방향으로 부르르 ── */
+/* ── 떨림: 짧게 가만히 있다가 자주, 글자마다 다른 방향으로 부르르 ── */
 .fx-word {
   white-space: nowrap;
 }
 .fx-shake {
-  --fx-period: 3.6s;
+  --fx-period: 1.7s;
   --fx-amp: 1px;
 }
 .fx-shake--strong {
-  --fx-period: 2.2s;
+  --fx-period: 1s;
   --fx-amp: 2px;
 }
 .fx-shake-ch {
@@ -116,8 +134,86 @@
   }
 }
 
+/* ── 깜빡임: 고장 난 전등처럼 불규칙한 간격으로 꺼졌다 켜진다 (주기/시작은 글마다 다름) ── */
+.fx-flicker {
+  animation: fx-flicker var(--fx-period, 4.6s) linear infinite;
+  animation-delay: var(--fx-delay, 0s);
+}
+.fx-flicker--strong {
+  animation-name: fx-flicker-strong;
+}
+@keyframes fx-flicker {
+  0%,
+  17%,
+  19.5%,
+  21%,
+  23.5%,
+  52%,
+  54%,
+  78%,
+  80.5%,
+  100% {
+    opacity: 1;
+  }
+  18% {
+    opacity: 0.2;
+  }
+  22% {
+    opacity: 0.45;
+  }
+  53% {
+    opacity: 0.1;
+  }
+  79% {
+    opacity: 0.3;
+  }
+}
+@keyframes fx-flicker-strong {
+  0%,
+  9%,
+  11%,
+  12.5%,
+  15%,
+  33%,
+  38%,
+  58%,
+  60%,
+  61.5%,
+  63.5%,
+  84%,
+  87%,
+  100% {
+    opacity: 1;
+  }
+  10% {
+    opacity: 0.05;
+  }
+  13.5% {
+    opacity: 0.35;
+  }
+  34%,
+  37% {
+    opacity: 0.02;
+  }
+  59% {
+    opacity: 0.15;
+  }
+  62.5% {
+    opacity: 0.05;
+  }
+  85.5% {
+    opacity: 0.25;
+  }
+}
+
+/* ── 타이핑: 아직 나오지 않은 글자는 자리만 차지한다 (줄바꿈 위치가 흔들리지 않도록) ── */
+.ty-hidden {
+  visibility: hidden;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .fx-shake-ch {
+  .fx-shake-ch,
+  .fx-flicker {
     animation: none;
   }
 }

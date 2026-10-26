@@ -6,7 +6,8 @@ import { EFFECT_TAGS } from '../markup/registry';
 import { api, ApiError, idFromPath, redirectToLogin } from '../shared/api';
 import type { EditStoryInfo, EditStoryResponse } from '../shared/api-types';
 import { readStorage, STORAGE_KEYS, writeStorage } from '../shared/storage';
-import { DefinitionsPanel, EndingsPanel, IssuesPanel, SettingsPanel } from './components/DefinitionsPanel';
+import { DefinitionsPanel, EndingsPanel, IssuesPanel } from './components/DefinitionsPanel';
+import { SettingsPanel } from './components/SettingsPanel';
 import { EncounterEditor } from './components/EncounterEditor';
 import { EncounterList } from './components/EncounterList';
 import { FlowGraph } from './components/FlowGraph';
@@ -49,11 +50,11 @@ export function EditorApp() {
 }
 
 const TABS: { tab: Tab; label: string }[] = [
+  { tab: 'settings', label: '기본 설정' },
   { tab: 'encounters', label: '인카운터' },
   { tab: 'flow', label: '흐름도' },
   { tab: 'definitions', label: '아이템·능력·플래그' },
   { tab: 'endings', label: '엔딩' },
-  { tab: 'settings', label: '시작 설정' },
   { tab: 'issues', label: '검증' },
   { tab: 'simulate', label: '시뮬레이션' },
   { tab: 'help', label: '도움말' },

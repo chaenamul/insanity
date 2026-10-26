@@ -7,7 +7,7 @@ export type Recipe<T> = (draft: Draft<T>) => void;
 /** 하위 객체를 고치는 함수. mergeKey가 같은 연속 수정(타이핑 등)은 되돌리기 한 번으로 묶인다 */
 export type Edit<T> = (recipe: Recipe<T>, mergeKey?: string) => void;
 
-export type Tab = 'encounters' | 'flow' | 'definitions' | 'endings' | 'settings' | 'issues' | 'simulate' | 'help';
+export type Tab = 'settings' | 'encounters' | 'flow' | 'definitions' | 'endings' | 'issues' | 'simulate' | 'help';
 
 export interface Nav {
   tab: Tab;

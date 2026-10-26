@@ -1,10 +1,12 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { evaluate } from './conditions';
 import { joinContent, normalizeContent } from './content';
-import { conditionTags } from './describe';
+import { addDays, formatDate } from './dates';
+import { conditionTags, paramValueText } from './describe';
 import { checkAvailability, selectNextEncounter } from './scheduler';
-import { choose, createInitialState, debugStartEncounter, getView, newRun, proceed } from './run';
+import { choose, createInitialState, debugStartEncounter, getView, newRun, proceed, syncRunState } from './run';
 import { simulate } from './simulate';
 import type { GameContent, RunState } from './types';
 import { validateContent } from './validate';
@@ -75,18 +77,23 @@ describe('정규화', () => {
 
 describe('효과', () => {
   it('최대 정신력이 줄면 현재 정신력도 그 이하로 깎인다', () => {
-    const c = content([simple('a', {}, [{ type: 'stat', stat: 'maxSanity', value: -30 }])]);
+    const c = content([simple('a', {}, [{ type: 'stat', id: 'sanity', field: 'max', value: -30 }])]);
     const s = choose(c, newRun(c, { seed: 1 }), 'ok');
-    expect(s.maxSanity).toBe(70);
-    expect(s.sanity).toBe(70);
+    expect(s.stats.sanity).toEqual({ value: 70, max: 70 });
+  });
+
+  it('예전 형식(stat: maxSanity)도 같은 효과로 읽는다', () => {
+    const c = content([simple('a', {}, [{ type: 'stat', stat: 'maxSanity', value: -30 }])]);
+    expect(c.encounters[0].nodes[0].choices[0].branches[0].outcomes[0].effects[0]).toMatchObject({ type: 'stat', id: 'sanity', field: 'max' });
+    expect(choose(c, newRun(c, { seed: 1 }), 'ok').stats.sanity.max).toBe(70);
   });
 
   it('범위 효과는 범위 안의 값을 준다', () => {
-    const c = content([simple('a', {}, [{ type: 'stat', stat: 'sanity', value: -1, valueMax: -6 }])]);
+    const c = content([simple('a', {}, [{ type: 'stat', id: 'sanity', value: -1, valueMax: -6 }])]);
     for (let seed = 0; seed < 30; seed++) {
       const s = choose(c, newRun(c, { seed }), 'ok');
-      expect(s.sanity).toBeGreaterThanOrEqual(94);
-      expect(s.sanity).toBeLessThanOrEqual(99);
+      expect(s.stats.sanity.value).toBeGreaterThanOrEqual(94);
+      expect(s.stats.sanity.value).toBeLessThanOrEqual(99);
     }
   });
 
@@ -104,6 +111,128 @@ describe('효과', () => {
   it('정신력이 0이 되면 광기 엔딩', () => {
     const c = content([simple('a', {}, [{ type: 'stat', stat: 'sanity', value: -999 }])]);
     expect(proceed(c, choose(c, newRun(c, { seed: 1 }), 'ok')).ending).toBe('madness');
+  });
+
+  it('숨긴 소지품/능력과 숨김 파라미터는 알림을 남기지 않는다', () => {
+    const effects = [
+      { type: 'item', id: 'gun', value: 1 },
+      { type: 'trait', id: 'lore', has: true },
+      { type: 'stat', id: 'secret', value: 2 },
+      { type: 'stat', id: 'hp', value: -1 },
+    ];
+    const params = [...content([]).params, { kind: 'stat', id: 'secret', name: '비밀', show: 'hidden', value: 0, max: null }];
+    const visible = content([simple('a', {}, effects)], { params });
+    const shown = choose(visible, newRun(visible, { seed: 1 }), 'ok');
+    expect(shown.current!.log.filter((l) => l.kind === 'effect').map((l) => l.text)).toEqual(['권총 획득', '능력 획득: 금지된 지식', '체력 -1']);
+
+    const c = content([simple('a', {}, effects)], { params, ui: { items: { show: false }, traits: { show: false } } });
+    const hidden = choose(c, newRun(c, { seed: 1 }), 'ok');
+    expect(hidden.current!.log.filter((l) => l.kind === 'effect').map((l) => l.text)).toEqual(['체력 -1']);
+    expect(hidden.items).toEqual({ gun: 1 });
+    expect(hidden.stats.secret.value).toBe(2);
+  });
+});
+
+describe('파라미터', () => {
+  const params = [
+    { kind: 'stat', id: 'hp', name: '체력', value: 3, max: 3, display: 'cells', zeroEnding: 'death' },
+    { kind: 'stat', id: 'money', name: '돈', value: 5, max: null },
+    { kind: 'text', id: 'weather', name: '날씨', value: '안개' },
+    { kind: 'date', id: 'day', name: '날짜', value: '1931-12-30' },
+  ];
+
+  it('params가 없는 예전 콘텐츠는 체력/정신력 파라미터를 갖는다', () => {
+    const c = normalizeContent({ start: { hp: 2, maxHp: 4, sanity: 50, maxSanity: 80 } });
+    expect(c.params.map((p) => [p.id, p.kind === 'stat' && p.value, p.kind === 'stat' && p.max])).toEqual([
+      ['hp', 2, 4],
+      ['sanity', 50, 80],
+    ]);
+    expect(createInitialState(c, 1).stats).toEqual({ hp: { value: 2, max: 4 }, sanity: { value: 50, max: 80 } });
+  });
+
+  it('상태/날짜 효과와 조건', () => {
+    const c = content(
+      [
+        simple('a', {}, [
+          { type: 'text', id: 'weather', value: '폭풍' },
+          { type: 'date', id: 'day', days: 3 },
+          { type: 'stat', id: 'money', value: 100 },
+        ]),
+      ],
+      { params },
+    );
+    const s = choose(c, newRun(c, { seed: 1 }), 'ok');
+    expect(s.texts.weather).toBe('폭풍');
+    expect(s.dates.day).toBe('1932-01-02');
+    expect(s.stats.money).toEqual({ value: 105, max: null });
+    expect(evaluate({ type: 'text', id: 'weather', op: '==', value: '폭풍' }, s)).toBe(true);
+    expect(evaluate({ type: 'date', id: 'day', op: '>=', value: '1932-01-01' }, s)).toBe(true);
+    expect(evaluate({ type: 'date', id: 'day', op: '<', value: '1932-01-02' }, s)).toBe(false);
+    expect(evaluate({ type: 'stat', id: 'money', field: 'max', op: '>', value: 1000 }, s)).toBe(true);
+    expect(s.current!.log.filter((l) => l.kind === 'effect').map((l) => l.text)).toEqual(['날씨: 폭풍', '+3일', '돈 +100']);
+  });
+
+  it('단위는 값과 알림에 붙는다', () => {
+    const withUnit = [{ kind: 'stat', id: 'money', name: '돈', value: 5, max: null, unit: '원' }];
+    const c = content([simple('a', {}, [{ type: 'stat', id: 'money', value: 100 }])], { params: withUnit });
+    const s = choose(c, newRun(c, { seed: 1 }), 'ok');
+    expect(paramValueText(c.params[0], s)).toBe('105원');
+    expect(s.current!.log.at(-1)).toMatchObject({ kind: 'effect', text: '돈 +100원' });
+    expect(conditionTags(c, { type: 'stat', id: 'money', field: 'value', op: '>=', value: 50 }, s)).toEqual([{ label: '돈 50원 이상', ok: true }]);
+  });
+
+  it('인카운터가 시작될 때 색을 바꾼다 (가변 색상)', () => {
+    const c = content([simple('a', { mode: 'fixed', fixedTurn: 1, condition: [] })], { theme: { variable: true } });
+    c.encounters[0].startColors = { background: '#efe6d1', text: null };
+    expect(newRun(c, { seed: 1 }).colors).toEqual({ background: '#efe6d1', text: null });
+    expect(normalizeContent({ encounters: [{ id: 'x', startColors: { background: 'nope', text: '#2a2824' } }] }).encounters[0].startColors).toEqual({
+      background: null,
+      text: '#2a2824',
+    });
+  });
+
+  it('0이 되면 엔딩인 수치는 목록 위쪽이 먼저', () => {
+    const c = content([simple('a', {}, [{ type: 'stat', id: 'hp', value: -9 }, { type: 'stat', id: 'sanity', value: -999 }])]);
+    expect(choose(c, newRun(c, { seed: 1 }), 'ok').pendingEnding).toBe('death');
+  });
+
+  it('예전 저장(hp/sanity)과 나중에 추가된 파라미터를 지금 콘텐츠에 맞춘다', () => {
+    const c = content([simple('a')], { params: [...content([]).params, params[2]] });
+    const old: Record<string, unknown> = { ...createInitialState(c, 1), hp: 1, maxHp: 3, sanity: 40, maxSanity: 90 };
+    for (const key of ['stats', 'texts', 'dates', 'colors']) delete old[key];
+    const synced = syncRunState(c, old as unknown as RunState);
+    expect(synced.stats).toEqual({ hp: { value: 1, max: 3 }, sanity: { value: 40, max: 90 } });
+    expect(synced.texts).toEqual({ weather: '안개' });
+    expect(synced.colors).toEqual({ background: null, text: null });
+    const current = createInitialState(c, 1);
+    expect(syncRunState(c, current)).toBe(current);
+  });
+
+  it('id를 바꾸면 조건/효과/엔딩 참조가 함께 바뀐다', () => {
+    const c = content([simple('a', { condition: [{ type: 'stat', id: 'hp', op: '>', value: 1 }] }, [{ type: 'stat', id: 'hp', value: -1 }])]);
+    renameReferences(c, 'param', 'hp', 'life');
+    renameReferences(c, 'ending', 'death', 'grave');
+    expect(findReferences(c, 'param', 'life')).toHaveLength(2);
+    expect(c.params[0]).toMatchObject({ id: 'hp', zeroEnding: 'grave' });
+  });
+
+  it('검증: 종류가 맞지 않는 파라미터 참조', () => {
+    const c = content([simple('a', { condition: [{ type: 'text', id: 'money', value: 'x' }] })], { params });
+    expect(validateContent(c).some((i) => i.severity === 'error' && i.message.includes("'돈'는 수치"))).toBe(true);
+  });
+
+  it('날짜 계산과 표시', () => {
+    expect(addDays('1931-02-27', 2)).toBe('1931-03-01');
+    const parts = (year: boolean, month: boolean, day: boolean, weekday: boolean) => ({ year, month, day, weekday });
+    expect(formatDate('1931-12-01', parts(true, true, true, true))).toBe('1931년 12월 1일 (화)');
+    expect(formatDate('1931-12-01', parts(false, true, true, false))).toBe('12월 1일');
+    expect(formatDate('1931-12-01', parts(false, false, false, true))).toBe('화요일');
+    expect(formatDate('1931-12-01', parts(false, false, false, false))).toBe('—');
+  });
+
+  it('예전 날짜 형식(format)을 연/월/일/요일 선택으로 읽는다', () => {
+    const c = content([], { params: [{ kind: 'date', id: 'd', name: '날짜', value: '1931-12-01', format: 'mdw' }] });
+    expect(c.params[0]).toMatchObject({ parts: { year: false, month: true, day: true, weekday: true } });
   });
 });
 

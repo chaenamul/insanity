@@ -1,3 +1,5 @@
+import { DEFAULT_THEME, isColor } from './colors';
+import { DEFAULT_DATE, DEFAULT_DATE_PARTS, normalizeDate } from './dates';
 import {
   BUILTIN_ENDINGS,
   type Branch,
@@ -5,6 +7,7 @@ import {
   type CompareOp,
   type Condition,
   type ConditionalText,
+  type DateParts,
   type Effect,
   type Encounter,
   type EncounterNode,
@@ -12,13 +15,20 @@ import {
   type EndingKind,
   type GameContent,
   type Outcome,
+  type ParamDef,
+  type ParamShow,
   type Prerequisite,
+  type ShelfSettings,
   type Spawn,
-  type StatKey,
+  type StatDisplay,
+  type StatField,
+  type ThemeColors,
+  type UiSettings,
 } from './types';
 
 // 콘텐츠 정규화: 손으로 작성했거나 일부 필드가 빠진 JSON도 완전한 형태로 맞춰준다.
 // 생략 가능한 것들: 대부분의 기본값, id, choice.outcomes(분기 없이 결과만 나열), 조건 배열(= 모두 만족).
+// 예전 형식(start.hp/sanity, { stat: 'maxSanity' })도 파라미터 형식으로 바꿔 읽는다.
 
 type Loose = Record<string, unknown>;
 
@@ -28,9 +38,18 @@ export function uid(prefix: string): string {
   return `${prefix}_${Date.now().toString(36).slice(-4)}${Math.random().toString(36).slice(2, 5)}${uidCounter.toString(36)}`;
 }
 
-const STATS: StatKey[] = ['hp', 'maxHp', 'sanity', 'maxSanity'];
 const OPS: CompareOp[] = ['>=', '<=', '==', '!=', '>', '<'];
 const ENDING_KINDS: EndingKind[] = ['death', 'madness', 'victory', 'other'];
+const PARAM_SHOWS: ParamShow[] = ['pinned', 'panel', 'hidden'];
+const STAT_DISPLAYS: StatDisplay[] = ['bar', 'cells', 'number'];
+
+/** 예전 형식의 수치 이름 → 파라미터 id와 현재/최대값 */
+const LEGACY_STATS: Record<string, { id: string; field: StatField }> = {
+  hp: { id: 'hp', field: 'value' },
+  maxHp: { id: 'hp', field: 'max' },
+  sanity: { id: 'sanity', field: 'value' },
+  maxSanity: { id: 'sanity', field: 'max' },
+};
 
 function obj(v: unknown): Loose {
   return v && typeof v === 'object' && !Array.isArray(v) ? (v as Loose) : {};
@@ -54,8 +73,13 @@ function bool(v: unknown, fallback: boolean): boolean {
 function op(v: unknown, fallback: CompareOp = '>='): CompareOp {
   return OPS.includes(v as CompareOp) ? (v as CompareOp) : fallback;
 }
-function stat(v: unknown): StatKey {
-  return STATS.includes(v as StatKey) ? (v as StatKey) : 'sanity';
+function oneOf<T extends string>(v: unknown, list: readonly T[], fallback: T): T {
+  return list.includes(v as T) ? (v as T) : fallback;
+}
+/** 수치 조건/효과의 대상. { id, field } 또는 예전 형식 { stat: 'maxSanity' } */
+function statRef(r: Loose): { id: string; field: StatField } {
+  if (r.id == null && typeof r.stat === 'string') return LEGACY_STATS[r.stat] ?? { id: r.stat, field: 'value' };
+  return { id: str(r.id), field: r.field === 'max' ? 'max' : 'value' };
 }
 
 export function normalizeCondition(raw: unknown): Condition | null {
@@ -73,7 +97,11 @@ export function normalizeCondition(raw: unknown): Condition | null {
     case 'flag':
       return { type: 'flag', id: str(r.id), op: op(r.op), value: num(r.value, 1) };
     case 'stat':
-      return { type: 'stat', stat: stat(r.stat), op: op(r.op), value: num(r.value, 0) };
+      return { type: 'stat', ...statRef(r), op: op(r.op), value: num(r.value, 0) };
+    case 'text':
+      return { type: 'text', id: str(r.id), op: r.op === '!=' ? '!=' : '==', value: str(r.value) };
+    case 'date':
+      return { type: 'date', id: str(r.id), op: op(r.op), value: normalizeDate(r.value) };
     case 'turn':
       return { type: 'turn', op: op(r.op), value: num(r.value, 1) };
     case 'seen':
@@ -87,7 +115,13 @@ export function normalizeEffect(raw: unknown): Effect | null {
   const r = obj(raw);
   switch (r.type) {
     case 'stat':
-      return { type: 'stat', stat: stat(r.stat), value: num(r.value, 0), valueMax: numOrNull(r.valueMax) };
+      return { type: 'stat', ...statRef(r), value: num(r.value, 0), valueMax: numOrNull(r.valueMax) };
+    case 'text':
+      return { type: 'text', id: str(r.id), value: str(r.value) };
+    case 'date':
+      return { type: 'date', id: str(r.id), mode: r.mode === 'set' ? 'set' : 'add', days: num(r.days, 1), date: normalizeDate(r.date) };
+    case 'theme':
+      return { type: 'theme', ...normalizeColors(r) };
     case 'item':
       return { type: 'item', id: str(r.id), value: num(r.value, 1) };
     case 'trait':
@@ -101,6 +135,11 @@ export function normalizeEffect(raw: unknown): Effect | null {
     default:
       return null;
   }
+}
+
+/** 가변 색상의 배경/글자 색. 올바른 색(#rrggbb)이 아니면 null = 이야기 기본 색 */
+function normalizeColors(r: Loose): ThemeColors {
+  return { background: isColor(r.background) ? r.background : null, text: isColor(r.text) ? r.text : null };
 }
 
 function effects(v: unknown): Effect[] {
@@ -213,6 +252,7 @@ export function normalizeEncounter(raw: unknown): Encounter {
     title: str(r.title),
     notes: str(r.notes),
     spawn: normalizeSpawn(r.spawn),
+    startColors: r.startColors && typeof r.startColors === 'object' ? normalizeColors(obj(r.startColors)) : null,
     start,
     nodes,
   };
@@ -229,10 +269,99 @@ export const DEFAULT_ENDINGS: EndingDef[] = [
   },
 ];
 
+/** 새 파라미터의 기본값 */
+export function createParam(kind: ParamDef['kind'], id: string, name: string): ParamDef {
+  switch (kind) {
+    case 'stat':
+      return { kind, id, name, show: 'pinned', value: 10, max: 10, unit: null, display: 'bar', zeroEnding: null, mood: false };
+    case 'text':
+      return { kind, id, name, show: 'pinned', value: '' };
+    case 'date':
+      return { kind, id, name, show: 'pinned', value: DEFAULT_DATE, parts: { ...DEFAULT_DATE_PARTS } };
+  }
+}
+
+/** 날짜에서 보여줄 정보. 예전 형식 format: 'ymd' | 'ymdw' | 'md' | 'mdw'도 읽는다 */
+function normalizeDateParts(r: Loose): DateParts {
+  if (r.parts && typeof r.parts === 'object') {
+    const p = obj(r.parts);
+    return {
+      year: bool(p.year, DEFAULT_DATE_PARTS.year),
+      month: bool(p.month, DEFAULT_DATE_PARTS.month),
+      day: bool(p.day, DEFAULT_DATE_PARTS.day),
+      weekday: bool(p.weekday, DEFAULT_DATE_PARTS.weekday),
+    };
+  }
+  const format = str(r.format);
+  return { year: !format.startsWith('m'), month: true, day: true, weekday: format.endsWith('w') };
+}
+
+/** params가 없는 예전 콘텐츠: start의 체력/정신력을 파라미터로 */
+function legacyParams(start: Loose): ParamDef[] {
+  const maxHp = num(start.maxHp, 3);
+  const maxSanity = num(start.maxSanity, 100);
+  return [
+    { kind: 'stat', id: 'hp', name: '체력', show: 'pinned', value: num(start.hp, maxHp), max: maxHp, unit: null, display: 'cells', zeroEnding: BUILTIN_ENDINGS.death, mood: false },
+    {
+      kind: 'stat',
+      id: 'sanity',
+      name: '정신력',
+      show: 'pinned',
+      value: num(start.sanity, maxSanity),
+      max: maxSanity,
+      unit: null,
+      display: 'bar',
+      zeroEnding: BUILTIN_ENDINGS.madness,
+      mood: true,
+    },
+  ];
+}
+
+function normalizeParam(raw: unknown): ParamDef {
+  const r = obj(raw);
+  const kind = r.kind === 'text' || r.kind === 'date' ? r.kind : 'stat';
+  const base = { id: str(r.id), name: str(r.name), show: oneOf(r.show, PARAM_SHOWS, 'pinned') };
+  switch (kind) {
+    case 'text':
+      return { ...base, kind, value: str(r.value) };
+    case 'date':
+      return { ...base, kind, value: normalizeDate(r.value), parts: normalizeDateParts(r) };
+    case 'stat': {
+      const max = numOrNull(r.max);
+      return {
+        ...base,
+        kind,
+        value: num(r.value, max ?? 0),
+        max: max == null ? null : Math.max(0, max),
+        unit: typeof r.unit === 'string' ? r.unit : null,
+        display: oneOf(r.display, STAT_DISPLAYS, max == null ? 'number' : 'bar'),
+        zeroEnding: r.zeroEnding == null || r.zeroEnding === '' ? null : str(r.zeroEnding),
+        mood: bool(r.mood, false),
+      };
+    }
+  }
+}
+
+function normalizeShelf(raw: unknown, label: string, empty: string): ShelfSettings {
+  const r = obj(raw);
+  return { show: bool(r.show, true), label: str(r.label) || label, empty: str(r.empty, empty) };
+}
+
+function normalizeUi(raw: unknown): UiSettings {
+  const r = obj(raw);
+  const hud = obj(r.hud);
+  return {
+    hud: { summary: hud.summary === 'text' ? 'text' : 'pinned', text: str(hud.text, '상태 보기') },
+    items: normalizeShelf(r.items, '소지품', '아무것도 가지고 있지 않다.'),
+    traits: normalizeShelf(r.traits, '능력', '아직 아무것도 깨닫지 못했다.'),
+  };
+}
+
 export function normalizeContent(raw: unknown): GameContent {
   const r = obj(raw);
   const meta = obj(r.meta);
   const start = obj(r.start);
+  const theme = obj(r.theme);
   const endings: EndingDef[] = arr(r.endings).map((e) => {
     const o = obj(e);
     return {
@@ -245,18 +374,19 @@ export function normalizeContent(raw: unknown): GameContent {
   for (const builtin of DEFAULT_ENDINGS) {
     if (!endings.some((e) => e.id === builtin.id)) endings.push({ ...builtin });
   }
-  const maxHp = num(start.maxHp, 3);
-  const maxSanity = num(start.maxSanity, 100);
   return {
-    version: 1,
+    version: 2,
     meta: { title: str(meta.title, '제목 없음'), subtitle: str(meta.subtitle), intro: str(meta.intro) },
     start: {
-      hp: num(start.hp, maxHp),
-      maxHp,
-      sanity: num(start.sanity, maxSanity),
-      maxSanity,
       items: arr(start.items).map((i) => ({ id: str(obj(i).id), count: num(obj(i).count, 1) })),
       traits: arr(start.traits).map((t) => str(t)),
+    },
+    params: Array.isArray(r.params) ? r.params.map(normalizeParam) : legacyParams(start),
+    ui: normalizeUi(r.ui),
+    theme: {
+      background: isColor(theme.background) ? theme.background : DEFAULT_THEME.background,
+      text: isColor(theme.text) ? theme.text : DEFAULT_THEME.text,
+      variable: bool(theme.variable, false),
     },
     items: arr(r.items).map((i) => ({ id: str(obj(i).id), name: str(obj(i).name), description: str(obj(i).description) })),
     traits: arr(r.traits).map((t) => ({ id: str(obj(t).id), name: str(obj(t).name), description: str(obj(t).description) })),

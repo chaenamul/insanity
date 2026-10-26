@@ -13,6 +13,7 @@
     "after": [],
     "condition": null
   },
+  "startColors": null,
   "start": "start",
   "nodes": [
     {
@@ -40,7 +41,8 @@
             "items": [
               {
                 "type": "stat",
-                "stat": "sanity",
+                "id": "sanity",
+                "field": "value",
                 "op": "<",
                 "value": 50
               }
@@ -84,7 +86,8 @@
                   "effects": [
                     {
                       "type": "stat",
-                      "stat": "sanity",
+                      "id": "sanity",
+                      "field": "value",
                       "value": -2,
                       "valueMax": -5
                     }
@@ -129,7 +132,8 @@
                   "effects": [
                     {
                       "type": "stat",
-                      "stat": "sanity",
+                      "id": "sanity",
+                      "field": "value",
                       "value": -3,
                       "valueMax": null
                     },
@@ -184,13 +188,15 @@
                   "effects": [
                     {
                       "type": "stat",
-                      "stat": "hp",
+                      "id": "hp",
+                      "field": "value",
                       "value": -1,
                       "valueMax": null
                     },
                     {
                       "type": "stat",
-                      "stat": "maxSanity",
+                      "id": "sanity",
+                      "field": "max",
                       "value": -3,
                       "valueMax": null
                     }

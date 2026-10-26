@@ -14,9 +14,20 @@ export type MarkupNode =
   | { type: 'text'; value: string }
   | { type: 'tag'; tag: string; param: string | null; children: MarkupNode[] };
 
+/** 짝이 맞은 서식 하나의 원문 위치 (에디터에서 서식을 고르거나 지울 때 사용) */
+export interface TagSpan {
+  tag: string;
+  param: string | null;
+  /** 여는 표기 [시작, 끝) — 예) [shake] 또는 ** */
+  open: [number, number];
+  /** 닫는 표기 [시작, 끝) */
+  close: [number, number];
+}
+
 export interface ParsedLine {
   nodes: MarkupNode[];
   problems: string[];
+  spans: TagSpan[];
 }
 
 interface Frame {
@@ -25,6 +36,8 @@ interface Frame {
   param: string | null;
   /** 짝이 안 맞을 때 글자 그대로 되돌리기 위한 원문 */
   raw: string;
+  /** 여는 표기의 시작 위치 */
+  at: number;
   children: MarkupNode[];
 }
 
@@ -47,16 +60,19 @@ function pushNodes(list: MarkupNode[], nodes: MarkupNode[]): void {
 
 export function parseLine(line: string, isKnownTag: (tag: string) => boolean): ParsedLine {
   const problems: string[] = [];
-  const stack: Frame[] = [{ kind: 'root', tag: '', param: null, raw: '', children: [] }];
+  const spans: TagSpan[] = [];
+  const stack: Frame[] = [{ kind: 'root', tag: '', param: null, raw: '', at: 0, children: [] }];
   const top = () => stack[stack.length - 1];
   let buf = '';
   const flush = () => {
     pushText(top().children, buf);
     buf = '';
   };
-  const close = () => {
+  /** 닫는 표기는 [at, end) */
+  const close = (at: number, end: number) => {
     const f = stack.pop()!;
     top().children.push({ type: 'tag', tag: f.tag, param: f.param, children: f.children });
+    spans.push({ tag: f.tag, param: f.param, open: [f.at, f.at + f.raw.length], close: [at, end] });
   };
   /** 닫히지 않은 서식은 원문 그대로 되돌린다 */
   const unwind = () => {
@@ -78,8 +94,8 @@ export function parseLine(line: string, isKnownTag: (tag: string) => boolean): P
       const raw = line[i + 1] === '*' ? '**' : '*';
       flush();
       const t = top();
-      if (t.kind === 'asterisk' && t.raw === raw) close();
-      else stack.push({ kind: 'asterisk', tag: raw === '**' ? 'b' : 'i', param: null, raw, children: [] });
+      if (t.kind === 'asterisk' && t.raw === raw) close(i, i + raw.length);
+      else stack.push({ kind: 'asterisk', tag: raw === '**' ? 'b' : 'i', param: null, raw, at: i, children: [] });
       i += raw.length;
       continue;
     }
@@ -105,11 +121,11 @@ export function parseLine(line: string, isKnownTag: (tag: string) => boolean): P
           } else {
             flush();
             while (stack.length - 1 > idx) unwind();
-            close();
+            close(i, i + m[0].length);
           }
         } else {
           flush();
-          stack.push({ kind: 'bracket', tag, param: m[3]?.trim() || null, raw: m[0], children: [] });
+          stack.push({ kind: 'bracket', tag, param: m[3]?.trim() || null, raw: m[0], at: i, children: [] });
         }
         i += m[0].length;
         continue;
@@ -120,7 +136,20 @@ export function parseLine(line: string, isKnownTag: (tag: string) => boolean): P
   }
   flush();
   while (stack.length > 1) unwind();
-  return { nodes: stack[0].children, problems };
+  return { nodes: stack[0].children, problems, spans };
+}
+
+/** 여러 줄 글 전체에서 짝이 맞은 서식의 위치 (줄마다 따로 읽고 전체 기준 위치로 바꾼다) */
+export function scanTags(text: string, isKnownTag: (tag: string) => boolean): TagSpan[] {
+  const out: TagSpan[] = [];
+  let offset = 0;
+  for (const line of text.split('\n')) {
+    for (const s of parseLine(line, isKnownTag).spans) {
+      out.push({ ...s, open: [s.open[0] + offset, s.open[1] + offset], close: [s.close[0] + offset, s.close[1] + offset] });
+    }
+    offset += line.length + 1;
+  }
+  return out;
 }
 
 /** 비어 있지 않은 줄마다 한 문단 */

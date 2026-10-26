@@ -2,10 +2,10 @@
 // 콘텐츠 데이터 모델 (에디터가 편집하고, 게임 엔진이 읽는 형식)
 // ─────────────────────────────────────────────────────────────
 
-/** 플레이어 수치. hp/maxHp = 체력 칸, sanity/maxSanity = 정신력 x/y */
-export type StatKey = 'hp' | 'maxHp' | 'sanity' | 'maxSanity';
-
 export type CompareOp = '>=' | '<=' | '==' | '!=' | '>' | '<';
+
+/** 수치 파라미터의 현재값 / 최대값 */
+export type StatField = 'value' | 'max';
 
 /**
  * 조건. 그룹(all/any)으로 묶어 중첩할 수 있다.
@@ -20,8 +20,12 @@ export type Condition =
   | { type: 'trait'; id: string; has: boolean }
   /** 숨겨진 플래그(숫자 변수) 비교 */
   | { type: 'flag'; id: string; op: CompareOp; value: number }
-  /** 체력/정신력 등 수치 비교 */
-  | { type: 'stat'; stat: StatKey; op: CompareOp; value: number }
+  /** 수치 파라미터(체력, 정신력 등) 비교 */
+  | { type: 'stat'; id: string; field: StatField; op: CompareOp; value: number }
+  /** 상태 파라미터(짧은 텍스트)가 같은지/다른지 */
+  | { type: 'text'; id: string; op: '==' | '!='; value: string }
+  /** 캘린더 파라미터의 날짜 비교 (YYYY-MM-DD) */
+  | { type: 'date'; id: string; op: CompareOp; value: string }
   /** 현재 몇 번째 인카운터인지 (1부터) */
   | { type: 'turn'; op: CompareOp; value: number }
   /** 이번 판에서 해당 인카운터를 겪었는지 */
@@ -31,8 +35,14 @@ export type ConditionType = Condition['type'];
 export type ConditionGroup = Extract<Condition, { type: 'all' | 'any' }>;
 
 export type Effect =
-  /** 수치 증감. valueMax가 있으면 value~valueMax 사이 무작위 (예: 정신력 -1~-6) */
-  | { type: 'stat'; stat: StatKey; value: number; valueMax?: number | null }
+  /** 수치 파라미터 증감. valueMax가 있으면 value~valueMax 사이 무작위 (예: 정신력 -1~-6) */
+  | { type: 'stat'; id: string; field: StatField; value: number; valueMax?: number | null }
+  /** 상태 파라미터를 이 글로 바꾼다 */
+  | { type: 'text'; id: string; value: string }
+  /** 캘린더 파라미터: add면 days일 지남(음수면 거꾸로), set이면 date로 */
+  | { type: 'date'; id: string; mode: 'add' | 'set'; days: number; date: string }
+  /** 가변 색상: 배경/글자 색을 바꾼다. null이면 이야기 기본 색으로 */
+  | ({ type: 'theme' } & ThemeColors)
   /** 아이템 증감 (음수면 잃음) */
   | { type: 'item'; id: string; value: number }
   /** 능력 획득/상실 */
@@ -126,12 +136,20 @@ export interface Spawn {
   condition: Condition | null;
 }
 
+/** 가변 색상: 배경/글자 색. null이면 이야기 기본 색 */
+export interface ThemeColors {
+  background: string | null;
+  text: string | null;
+}
+
 export interface Encounter {
   id: string;
   title: string;
   /** 디자이너 메모 (게임에 표시되지 않음) */
   notes: string;
   spawn: Spawn;
+  /** 가변 색상: 이 인카운터가 시작될 때 바꿀 색. null이면 그대로 */
+  startColors: ThemeColors | null;
   /** 시작 페이지 id */
   start: string;
   nodes: EncounterNode[];
@@ -166,12 +184,93 @@ export interface EndingDef {
 }
 
 export interface StartState {
-  hp: number;
-  maxHp: number;
-  sanity: number;
-  maxSanity: number;
   items: { id: string; count: number }[];
   traits: string[];
+}
+
+// ─── 파라미터: 플레이어 화면 상단에 보이는 정보 (체력, 정신력, 날짜, 상태 등) ───
+
+export type ParamKind = 'stat' | 'text' | 'date';
+
+/** pinned: 상단에 항상 / panel: 상단을 펼쳤을 때만 / hidden: 플레이어에게 보이지 않음 */
+export type ParamShow = 'pinned' | 'panel' | 'hidden';
+
+/** 수치 표시 방식: 막대(현재/최대) / 칸(체력처럼) / 숫자 */
+export type StatDisplay = 'bar' | 'cells' | 'number';
+
+/** 날짜에서 보여줄 정보 (예: 월·일·요일만 → "12월 1일 (화)") */
+export interface DateParts {
+  year: boolean;
+  month: boolean;
+  day: boolean;
+  weekday: boolean;
+}
+
+interface ParamBase {
+  id: string;
+  name: string;
+  show: ParamShow;
+}
+
+/** 수치: 현재값과 (있으면) 최대값. 0 아래로는 내려가지 않는다 */
+export interface StatParam extends ParamBase {
+  kind: 'stat';
+  /** 시작 값 */
+  value: number;
+  /** 시작 최대값. null이면 상한 없음 */
+  max: number | null;
+  /** 숫자 뒤에 붙는 단위 (예: 원, %, kg). null이면 단위 없음 */
+  unit: string | null;
+  display: StatDisplay;
+  /** 0이 되면 도달하는 엔딩 (체력 → 죽음, 정신력 → 광기). null이면 없음 */
+  zeroEnding: string | null;
+  /** 시작 최대값에 비해 낮아질수록 화면이 어두워지고 흔들린다 */
+  mood: boolean;
+}
+
+/** 상태: 짧은 텍스트 (예: "중독", "평온") */
+export interface TextParam extends ParamBase {
+  kind: 'text';
+  value: string;
+}
+
+/** 캘린더: 날짜 (YYYY-MM-DD) */
+export interface DateParam extends ParamBase {
+  kind: 'date';
+  value: string;
+  parts: DateParts;
+}
+
+export type ParamDef = StatParam | TextParam | DateParam;
+
+// ─── 플레이어 화면 설정 ───
+
+/** 상단 정보가 접혀 있을 때 보일 것: 상단 고정 파라미터들 / 제작자가 쓴 문구만 */
+export interface HudSettings {
+  summary: 'pinned' | 'text';
+  text: string;
+}
+
+/** 하단 소지품/능력 버튼 */
+export interface ShelfSettings {
+  /** false면 버튼과 획득/상실 알림이 아예 보이지 않는다 */
+  show: boolean;
+  label: string;
+  /** 비어 있을 때의 문구 */
+  empty: string;
+}
+
+export interface UiSettings {
+  hud: HudSettings;
+  items: ShelfSettings;
+  traits: ShelfSettings;
+}
+
+/** 이야기의 배경/글자 색 (#rrggbb). variable이면 진행 중 효과로 바꿀 수 있다 */
+export interface StoryTheme {
+  background: string;
+  text: string;
+  variable: boolean;
 }
 
 export interface GameMeta {
@@ -182,9 +281,12 @@ export interface GameMeta {
 }
 
 export interface GameContent {
-  version: 1;
+  version: 2;
   meta: GameMeta;
   start: StartState;
+  params: ParamDef[];
+  ui: UiSettings;
+  theme: StoryTheme;
   items: ItemDef[];
   traits: TraitDef[];
   flags: FlagDef[];
@@ -238,10 +340,14 @@ export interface RunState {
   rng: number;
   /** 완료한 인카운터 수. 진행 중인 인카운터는 turn + 1번째 */
   turn: number;
-  hp: number;
-  maxHp: number;
-  sanity: number;
-  maxSanity: number;
+  /** 수치 파라미터의 현재값/최대값 */
+  stats: Record<string, { value: number; max: number | null }>;
+  /** 상태 파라미터 */
+  texts: Record<string, string>;
+  /** 캘린더 파라미터 (YYYY-MM-DD) */
+  dates: Record<string, string>;
+  /** 가변 색상 효과로 바뀐 색. null이면 이야기 기본 색 */
+  colors: ThemeColors;
   items: Record<string, number>;
   traits: string[];
   flags: Record<string, number>;

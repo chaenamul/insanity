@@ -1,3 +1,4 @@
+import { compareDates } from './dates';
 import type { CompareOp, Condition, RunState } from './types';
 
 export function compare(a: number, op: CompareOp, b: number): boolean {
@@ -40,8 +41,18 @@ export function evaluate(condition: Condition | null | undefined, state: RunStat
       return state.traits.includes(condition.id) === condition.has;
     case 'flag':
       return compare(state.flags[condition.id] ?? 0, condition.op, condition.value);
-    case 'stat':
-      return compare(state[condition.stat], condition.op, condition.value);
+    case 'stat': {
+      // 상한 없는 수치의 최대값은 무한대로 본다
+      const s = state.stats[condition.id];
+      const v = condition.field === 'max' ? (s ? (s.max ?? Infinity) : 0) : (s?.value ?? 0);
+      return compare(v, condition.op, condition.value);
+    }
+    case 'text': {
+      const same = (state.texts[condition.id] ?? '') === condition.value;
+      return condition.op === '!=' ? !same : same;
+    }
+    case 'date':
+      return compare(compareDates(state.dates[condition.id] ?? '', condition.value), condition.op, 0);
     case 'turn':
       return compare(currentTurnNumber(state), condition.op, condition.value);
     case 'seen':

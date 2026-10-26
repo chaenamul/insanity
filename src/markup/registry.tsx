@@ -3,11 +3,11 @@ import { cloneElement, Fragment, isValidElement, type CSSProperties, type ReactN
 // ─────────────────────────────────────────────────────────────
 // 글자 효과 목록 — 새 효과는 여기에 항목 하나만 추가하면 된다.
 //
-//  1. TEXT_EFFECTS에 { tag, label, description, ... } 추가
+//  1. TEXT_EFFECTS에 { tag, label, description, group, ... } 추가
 //  2. 모양은 둘 중 하나로 정한다
 //     - render를 생략하면 <span class="fx-태그 fx-태그--값">으로 감싸므로 markup.css에 CSS만 쓰면 됨
 //     - 글자별 애니메이션 등은 render로 직접 그린다 (splitLetters 참고)
-//  3. 에디터 도구 모음, 게임 화면, 검증(알 수 없는 태그 경고)에 자동으로 반영된다
+//  3. 에디터 도구 모음/선택 메뉴, 게임 화면, 검증(알 수 없는 태그 경고)에 자동으로 반영된다
 // ─────────────────────────────────────────────────────────────
 
 export interface EffectParam {
@@ -15,6 +15,15 @@ export interface EffectParam {
   value: string;
   label: string;
 }
+
+/** 에디터에서 묶어 보여줄 분류: 기본(굵게/기울임) · 색 · 특수 효과 */
+export type EffectGroup = 'basic' | 'color' | 'special';
+
+export const EFFECT_GROUP_LABELS: Record<EffectGroup, string> = {
+  basic: '기본',
+  color: '색',
+  special: '특수 효과',
+};
 
 export interface RenderContext {
   /** [tag=값]의 값 */
@@ -29,10 +38,11 @@ export interface TextEffect {
   /** 에디터 도구 모음 이름 */
   label: string;
   description: string;
+  group: EffectGroup;
   /** 고를 수 있는 값. 없으면 값 없이 사용 */
   params?: EffectParam[];
-  /** 에디터 도구 모음에 보일지 (기본 true) */
-  toolbar?: boolean;
+  /** 에디터에서 쓰는 표기 (기본은 [tag] / [tag=값]). 굵게/기울임은 별표 */
+  markup?: { open: string; close: string };
   render?: (children: ReactNode, ctx: RenderContext) => ReactNode;
 }
 
@@ -76,20 +86,23 @@ export const TEXT_EFFECTS: TextEffect[] = [
     tag: 'b',
     label: '굵게',
     description: '**글자** 와 같음',
-    toolbar: false,
+    group: 'basic',
+    markup: { open: '**', close: '**' },
     render: (children) => <strong>{children}</strong>,
   },
   {
     tag: 'i',
     label: '기울임',
     description: '*글자* 와 같음',
-    toolbar: false,
+    group: 'basic',
+    markup: { open: '*', close: '*' },
     render: (children) => <em>{children}</em>,
   },
   {
     tag: 'color',
     label: '색',
     description: '글자 색. [color=#ff0000]처럼 직접 색을 써도 된다',
+    group: 'color',
     params: [
       { value: 'blood', label: '핏빛' },
       { value: 'abyss', label: '심연의 녹색' },
@@ -108,11 +121,13 @@ export const TEXT_EFFECTS: TextEffect[] = [
     tag: 'faint',
     label: '희미하게',
     description: '흐릿하게 사라질 듯한 글자 (속삭임, 환청)',
+    group: 'special',
   },
   {
     tag: 'shake',
     label: '떨림',
-    description: '글자가 간헐적으로 부르르 떤다',
+    description: '글자가 자주 부르르 떤다',
+    group: 'special',
     params: [
       { value: '', label: '보통' },
       { value: 'strong', label: '강하게' },
@@ -121,14 +136,63 @@ export const TEXT_EFFECTS: TextEffect[] = [
       <span
         className={`fx-shake${param === 'strong' ? ' fx-shake--strong' : ''}`}
         // 여러 군데의 떨림이 동시에 일어나지 않도록 시작 시점을 흩뜨린다
-        style={{ '--fx-delay': `${-(seed % 4000)}ms` } as CSSProperties}
+        style={{ '--fx-delay': `${-(seed % 2000)}ms` } as CSSProperties}
       >
         {splitLetters(children, 'fx-shake-ch')}
       </span>
     ),
+  },
+  {
+    tag: 'flicker',
+    label: '깜빡임',
+    description: '고장 난 전등처럼 불규칙하게 깜빡인다',
+    group: 'special',
+    params: [
+      { value: '', label: '보통' },
+      { value: 'strong', label: '강하게' },
+    ],
+    render: (children, { param, seed }) => {
+      const strong = param === 'strong';
+      // 같은 주기로 깜빡이면 규칙적으로 보이므로 글마다 주기와 시작 시점을 다르게 한다
+      const period = (strong ? 2.4 : 4.6) + (seed % 9) * 0.37;
+      return (
+        <span
+          className={`fx-flicker${strong ? ' fx-flicker--strong' : ''}`}
+          style={{ '--fx-period': `${period.toFixed(2)}s`, '--fx-delay': `${-(seed % 5000)}ms` } as CSSProperties}
+        >
+          {children}
+        </span>
+      );
+    },
   },
 ];
 
 export const EFFECTS_BY_TAG: ReadonlyMap<string, TextEffect> = new Map(TEXT_EFFECTS.map((e) => [e.tag, e]));
 export const EFFECT_TAGS: ReadonlySet<string> = new Set(EFFECTS_BY_TAG.keys());
 export const isKnownTag = (tag: string): boolean => EFFECT_TAGS.has(tag);
+
+/** 에디터 메뉴에 나열할 서식 하나 (효과 × 값) */
+export interface FormatOption {
+  tag: string;
+  /** 값이 없으면 null */
+  param: string | null;
+  label: string;
+  group: EffectGroup;
+  description: string;
+  open: string;
+  close: string;
+}
+
+export const FORMAT_OPTIONS: FormatOption[] = TEXT_EFFECTS.flatMap((fx) => {
+  const params = fx.params ?? [{ value: '', label: '' }];
+  return params.map((p) => ({
+    tag: fx.tag,
+    param: p.value || null,
+    // 색은 값 이름만 ("핏빛"), 다른 효과는 "떨림 (강하게)"처럼. 기본값('')은 효과 이름만
+    label: fx.group === 'color' ? p.label : p.value ? `${fx.label} (${p.label})` : fx.label,
+    group: fx.group,
+    description: fx.description,
+    open: fx.markup?.open ?? (p.value ? `[${fx.tag}=${p.value}]` : `[${fx.tag}]`),
+    close: fx.markup?.close ?? `[/${fx.tag}]`,
+  }));
+});

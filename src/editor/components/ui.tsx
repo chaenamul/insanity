@@ -85,6 +85,19 @@ export function Field({ label, hint, children }: { label: string; hint?: string;
   );
 }
 
+/** Field와 같은 모양이지만 <label>이 아니다. 안에 버튼이나 체크박스가 여러 개일 때 (제목을 눌러도 첫 버튼이 눌리지 않게) */
+export function Group({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
+  return (
+    <div className="field">
+      <span className="field-label">
+        {label}
+        {hint && <span className="field-hint">{hint}</span>}
+      </span>
+      {children}
+    </div>
+  );
+}
+
 export function IconButton({
   onClick,
   title,

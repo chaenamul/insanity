@@ -13,6 +13,7 @@
     "after": [],
     "condition": null
   },
+  "startColors": null,
   "start": "start",
   "nodes": [
     {
@@ -63,7 +64,8 @@
                   "effects": [
                     {
                       "type": "stat",
-                      "stat": "sanity",
+                      "id": "sanity",
+                      "field": "value",
                       "value": -1,
                       "valueMax": null
                     }
@@ -83,7 +85,8 @@
                   "effects": [
                     {
                       "type": "stat",
-                      "stat": "sanity",
+                      "id": "sanity",
+                      "field": "value",
                       "value": -2,
                       "valueMax": -6
                     }
@@ -111,13 +114,15 @@
                   "effects": [
                     {
                       "type": "stat",
-                      "stat": "sanity",
+                      "id": "sanity",
+                      "field": "value",
                       "value": -5,
                       "valueMax": null
                     },
                     {
                       "type": "stat",
-                      "stat": "maxSanity",
+                      "id": "sanity",
+                      "field": "max",
                       "value": -3,
                       "valueMax": null
                     },
@@ -160,7 +165,8 @@
                   "effects": [
                     {
                       "type": "stat",
-                      "stat": "sanity",
+                      "id": "sanity",
+                      "field": "value",
                       "value": 5,
                       "valueMax": null
                     },

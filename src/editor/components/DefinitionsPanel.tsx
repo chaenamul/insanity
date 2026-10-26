@@ -1,35 +1,15 @@
 import { useMemo, useState } from 'react';
 import { makeUniqueId } from '../../engine/content';
-import type { EndingKind, GameContent } from '../../engine/types';
+import type { EndingKind } from '../../engine/types';
 import { BUILTIN_ENDINGS } from '../../engine/types';
-import { findReferences, refsOfCondition, refsOfEffect, renameReferences, walkContent, type Loc, type RefKind } from '../../engine/walk';
+import { findReferences, renameReferences, type Loc } from '../../engine/walk';
+import { collectReferences } from '../references';
 import { useEditor } from '../state';
 import { IdInput } from './IdInput';
-import { RefSelect } from './RefSelect';
 import { RichTextArea } from './RichTextArea';
-import { Field, IconButton, NumberInput } from './ui';
+import { IconButton, NumberInput } from './ui';
 
-/** 종류:id → 참조 위치 목록 */
-function collectReferences(content: GameContent): Map<string, Loc[]> {
-  const map = new Map<string, Loc[]>();
-  const add = (kind: RefKind, id: string, loc: Loc) => {
-    const key = `${kind}:${id}`;
-    map.set(key, [...(map.get(key) ?? []), loc]);
-  };
-  walkContent(content, {
-    condition(c, loc) {
-      const r = refsOfCondition(c);
-      if (r) add(r.kind, r.id, loc);
-    },
-    effect(e, loc) {
-      const r = refsOfEffect(e);
-      if (r) add(r.kind, r.id, loc);
-    },
-  });
-  return map;
-}
-
-function Usage({ refs }: { refs: Loc[] }) {
+export function Usage({ refs }: { refs: Loc[] }) {
   const { content, navigate } = useEditor();
   const [open, setOpen] = useState(false);
   if (refs.length === 0) return <span className="muted usage">미사용</span>;
@@ -46,7 +26,9 @@ function Usage({ refs }: { refs: Loc[] }) {
                 type="button"
                 className="link-btn small"
                 onClick={() =>
-                  r.encounterId ? navigate({ tab: 'encounters', encounterId: r.encounterId, nodeId: r.nodeId, nonce: Date.now() }) : navigate({ tab: 'settings' })
+                  r.encounterId
+                    ? navigate({ tab: 'encounters', encounterId: r.encounterId, nodeId: r.nodeId, nonce: Date.now() })
+                    : navigate({ tab: 'settings' })
                 }
               >
                 {r.encounterId ? content.encounters.find((e) => e.id === r.encounterId)?.title || r.encounterId : ''} {r.where}
@@ -179,8 +161,8 @@ const ENDING_KINDS: { value: EndingKind; label: string }[] = [
 ];
 
 const BUILTIN_HELP: Record<string, string> = {
-  [BUILTIN_ENDINGS.death]: '체력이 0이 되면 자동으로 도달',
-  [BUILTIN_ENDINGS.madness]: '정신력이 0이 되면 자동으로 도달',
+  [BUILTIN_ENDINGS.death]: '기본 엔딩 (체력 파라미터가 0이 될 때 쓰임)',
+  [BUILTIN_ENDINGS.madness]: '기본 엔딩 (정신력 파라미터가 0이 될 때 쓰임)',
   [BUILTIN_ENDINGS.exhausted]: '더 이상 출현 가능한 인카운터가 없을 때 (보통은 설계 실수 → 채움용 반복 인카운터 추천)',
 };
 
@@ -191,6 +173,7 @@ export function EndingsPanel() {
     <div className="panel">
       {content.endings.map((e, i) => {
         const builtin = e.id in BUILTIN_HELP;
+        const zeroOf = content.params.filter((p) => p.kind === 'stat' && p.zeroEnding === e.id).map((p) => p.name || p.id);
         return (
           <section key={i} className={`card ending-card kind-${e.kind}`}>
             <div className="row">
@@ -221,7 +204,11 @@ export function EndingsPanel() {
                   </option>
                 ))}
               </select>
-              {builtin ? <span className="start-badge">기본</span> : <Usage refs={refs.get(`ending:${e.id}`) ?? []} />}
+              {builtin ? (
+                <span className="start-badge">기본</span>
+              ) : (
+                <Usage refs={[...(refs.get(`ending:${e.id}`) ?? []), ...findReferences({ ...content, encounters: [] }, 'ending', e.id)]} />
+              )}
               <span className="spacer" />
               {!builtin && (
                 <IconButton title="삭제" danger onClick={() => window.confirm(`엔딩 '${e.title || e.id}'를 삭제할까요?`) && update((d) => void d.endings.splice(i, 1))}>
@@ -229,7 +216,11 @@ export function EndingsPanel() {
                 </IconButton>
               )}
             </div>
-            {builtin && <p className="help">{BUILTIN_HELP[e.id]}</p>}
+            {(builtin || zeroOf.length > 0) && (
+              <p className="help">
+                {zeroOf.length > 0 ? `${zeroOf.join(', ')} 값이 0이 되면 자동으로 도달` : BUILTIN_HELP[e.id]}
+              </p>
+            )}
             <RichTextArea value={e.text} placeholder="엔딩 서술" onChange={(v) => update((d) => void (d.endings[i].text = v), `ending:${i}:text`)} />
           </section>
         );
@@ -244,82 +235,6 @@ export function EndingsPanel() {
         + 엔딩 추가
       </button>
       <p className="help">엔딩은 결과 효과의 "엔딩"으로 도달합니다.</p>
-    </div>
-  );
-}
-
-export function SettingsPanel() {
-  const { content, update } = useEditor();
-  const s = content.start;
-  return (
-    <div className="panel">
-      <section className="card">
-        <h3 className="card-title">게임 정보</h3>
-        <div className="row wrap">
-          <Field label="제목">
-            <input value={content.meta.title} onChange={(e) => update((d) => void (d.meta.title = e.target.value), 'meta:title')} />
-          </Field>
-          <Field label="부제">
-            <input value={content.meta.subtitle} onChange={(e) => update((d) => void (d.meta.subtitle = e.target.value), 'meta:subtitle')} />
-          </Field>
-        </div>
-        <Field label="도입부" hint="타이틀 화면에 표시">
-          <RichTextArea value={content.meta.intro} onChange={(v) => update((d) => void (d.meta.intro = v), 'meta:intro')} />
-        </Field>
-      </section>
-
-      <section className="card">
-        <h3 className="card-title">시작 상태</h3>
-        <div className="row wrap">
-          <Field label="체력 (칸)">
-            <span className="inline">
-              <NumberInput value={s.hp} min={0} onChange={(v) => update((d) => void (d.start.hp = v ?? 0), 'start:hp')} />
-              <span className="unit">/</span>
-              <NumberInput value={s.maxHp} min={1} onChange={(v) => update((d) => void (d.start.maxHp = v ?? 1), 'start:maxHp')} />
-            </span>
-          </Field>
-          <Field label="정신력" hint="현재 / 최대">
-            <span className="inline">
-              <NumberInput value={s.sanity} min={0} onChange={(v) => update((d) => void (d.start.sanity = v ?? 0), 'start:sanity')} />
-              <span className="unit">/</span>
-              <NumberInput value={s.maxSanity} min={1} onChange={(v) => update((d) => void (d.start.maxSanity = v ?? 1), 'start:maxSanity')} />
-            </span>
-          </Field>
-        </div>
-
-        <div className="subsection">
-          <div className="subsection-title">시작 아이템</div>
-          {s.items.map((it, i) => (
-            <div key={i} className="row">
-              <RefSelect kind="item" value={it.id} onChange={(id) => update((d) => void (d.start.items[i].id = id))} />
-              <NumberInput value={it.count} min={1} width={44} onChange={(v) => update((d) => void (d.start.items[i].count = v ?? 1))} />
-              <span className="unit">개</span>
-              <IconButton title="삭제" danger onClick={() => update((d) => void d.start.items.splice(i, 1))}>
-                ✕
-              </IconButton>
-            </div>
-          ))}
-          <button type="button" className="link-btn" onClick={() => update((d) => void d.start.items.push({ id: content.items[0]?.id ?? '', count: 1 }))}>
-            + 시작 아이템
-          </button>
-        </div>
-
-        <div className="subsection">
-          <div className="subsection-title">시작 능력</div>
-          {s.traits.map((t, i) => (
-            <div key={i} className="row">
-              <RefSelect kind="trait" value={t} onChange={(id) => update((d) => void (d.start.traits[i] = id))} />
-              <IconButton title="삭제" danger onClick={() => update((d) => void d.start.traits.splice(i, 1))}>
-                ✕
-              </IconButton>
-            </div>
-          ))}
-          <button type="button" className="link-btn" onClick={() => update((d) => void d.start.traits.push(content.traits[0]?.id ?? ''))}>
-            + 시작 능력
-          </button>
-        </div>
-        <p className="help">플래그 초기값은 "아이템·능력·플래그" 탭에서 정합니다.</p>
-      </section>
     </div>
   );
 }

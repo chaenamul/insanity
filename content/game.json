@@ -1,15 +1,11 @@
 {
-  "version": 1,
+  "version": 2,
   "meta": {
     "title": "INSANITY",
     "subtitle": "흑포(黑浦) 기행",
     "intro": "1931년 겨울, 실종된 형이 보낸 마지막 편지를 따라 당신은 지도에도 없는 어촌 흑포에 도착했다.\n안개가 걷히지 않는 마을. 이곳 사람들은 바다를 등지고 기도한다."
   },
   "start": {
-    "hp": 3,
-    "maxHp": 3,
-    "sanity": 100,
-    "maxSanity": 100,
     "items": [
       {
         "id": "pistol",
@@ -17,6 +13,53 @@
       }
     ],
     "traits": []
+  },
+  "params": [
+    {
+      "id": "hp",
+      "name": "체력",
+      "show": "pinned",
+      "kind": "stat",
+      "value": 3,
+      "max": 3,
+      "unit": null,
+      "display": "cells",
+      "zeroEnding": "death",
+      "mood": false
+    },
+    {
+      "id": "sanity",
+      "name": "정신력",
+      "show": "pinned",
+      "kind": "stat",
+      "value": 100,
+      "max": 100,
+      "unit": null,
+      "display": "bar",
+      "zeroEnding": "madness",
+      "mood": true
+    }
+  ],
+  "ui": {
+    "hud": {
+      "summary": "pinned",
+      "text": "상태 보기"
+    },
+    "items": {
+      "show": true,
+      "label": "소지품",
+      "empty": "아무것도 가지고 있지 않다."
+    },
+    "traits": {
+      "show": true,
+      "label": "능력",
+      "empty": "아직 아무것도 깨닫지 못했다."
+    }
+  },
+  "theme": {
+    "background": "#0b0d0c",
+    "text": "#d6d2c4",
+    "variable": false
   },
   "items": [
     {

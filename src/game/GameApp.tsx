@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
-import { choose, getView, isStateCompatible, newRun, proceed } from '../engine/run';
+import { choose, getView, isStateCompatible, newRun, proceed, syncRunState } from '../engine/run';
 import type { GameContent, RunState } from '../engine/types';
 import { RichText } from '../markup/render';
 import { loadPlaytestContent, STORAGE_KEYS } from '../shared/storage';
@@ -12,7 +12,20 @@ import { MenuDrawer } from './MenuDrawer';
 import { Sheet } from './Overlays';
 import { ScrollArea } from './ScrollArea';
 import type { RunSaver } from './saver';
-import { FONT_SIZES, useSettings } from './settings';
+import { FONT_SIZES, TYPING_SPEEDS, useSettings } from './settings';
+import { resolveColors, useDocumentColors } from './theme';
+
+/** '화면 효과'를 켠 수치(정신력 등)가 시작 최대값에 비해 낮을수록 화면이 어두워지고 흔들린다 */
+function moodClass(content: GameContent, run: RunState | null): string {
+  if (!run) return '';
+  let ratio = 1;
+  for (const p of content.params) {
+    if (p.kind !== 'stat' || !p.mood || !p.max) continue;
+    const s = run.stats[p.id];
+    if (s) ratio = Math.min(ratio, s.value / p.max);
+  }
+  return ratio <= 0.2 ? 'mood-critical' : ratio <= 0.4 ? 'mood-low' : '';
+}
 
 interface Props {
   initialContent: GameContent;
@@ -53,7 +66,10 @@ export function GameApp({ initialContent, saver, savedRun, initialRun, isPlaytes
     const onStorage = (e: StorageEvent) => {
       if (e.key !== STORAGE_KEYS.playtestContent) return;
       const next = loadPlaytestContent();
-      if (next) setContent(next);
+      if (!next) return;
+      setContent(next);
+      // 새로 추가된 파라미터는 시작값으로 채운다
+      setRun((r) => (r ? syncRunState(next, r) : r));
     };
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
@@ -108,9 +124,9 @@ export function GameApp({ initialContent, saver, savedRun, initialRun, isPlaytes
     return () => window.removeEventListener('keydown', onKey);
   }, [view, run, onChoose, onProceed, canDebug, menuOpen, sheet]);
 
-  const baseSanity = content.start.maxSanity || 100;
-  const sanityRatio = run ? run.sanity / baseSanity : 1;
-  const mood = sanityRatio <= 0.2 ? 'mood-critical' : sanityRatio <= 0.4 ? 'mood-low' : '';
+  useDocumentColors(resolveColors(content, run, settings.theme));
+  const mood = moodClass(content, run);
+  const cps = TYPING_SPEEDS[settings.typing].cps;
   const style = { '--story-size': `${FONT_SIZES[settings.fontSize].px}px` } as CSSProperties;
 
   if (!run) {
@@ -142,7 +158,7 @@ export function GameApp({ initialContent, saver, savedRun, initialRun, isPlaytes
 
   return (
     <div className={`game ${mood}`} style={style}>
-      <Hud state={run} baseSanity={baseSanity} onMenu={() => setMenuOpen(true)} badge={isPlaytest ? '테스트' : undefined} />
+      <Hud content={content} state={run} onMenu={() => setMenuOpen(true)} badge={isPlaytest ? '테스트' : undefined} />
       <main className="page">
         {!compatible ? (
           <>
@@ -158,19 +174,23 @@ export function GameApp({ initialContent, saver, savedRun, initialRun, isPlaytes
             </ScrollArea>
           </>
         ) : run.ending ? (
-          <EndingView content={content} state={run} onRestart={() => startNew()} onTitle={toTitle} />
+          <EndingView content={content} state={run} onRestart={() => startNew()} onTitle={toTitle} cps={cps} />
         ) : view ? (
-          <EncounterView state={run} view={view} onChoose={onChoose} onProceed={onProceed} />
+          <EncounterView state={run} view={view} onChoose={onChoose} onProceed={onProceed} cps={cps} />
         ) : null}
       </main>
-      <Dock state={run} seen={seen} onOpen={openSheet} />
+      <Dock content={content} state={run} seen={seen} onOpen={openSheet} />
 
-      <Sheet open={sheet === 'items'} title="소지품" onClose={() => setSheet(null)}>
-        <ItemList content={content} state={run} />
-      </Sheet>
-      <Sheet open={sheet === 'traits'} title="능력" onClose={() => setSheet(null)}>
-        <TraitList content={content} state={run} />
-      </Sheet>
+      {content.ui.items.show && (
+        <Sheet open={sheet === 'items'} title={content.ui.items.label} onClose={() => setSheet(null)}>
+          <ItemList content={content} state={run} />
+        </Sheet>
+      )}
+      {content.ui.traits.show && (
+        <Sheet open={sheet === 'traits'} title={content.ui.traits.label} onClose={() => setSheet(null)}>
+          <TraitList content={content} state={run} />
+        </Sheet>
+      )}
       <MenuDrawer
         open={menuOpen}
         onClose={() => setMenuOpen(false)}

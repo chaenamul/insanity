@@ -1,8 +1,9 @@
 import { useMemo, useState, type Dispatch, type SetStateAction } from 'react';
-import { encounterTitle, SPAWN_MODE_LABELS, STAT_LABELS } from '../engine/describe';
+import { addDays, normalizeDate } from '../engine/dates';
+import { encounterTitle, SPAWN_MODE_LABELS } from '../engine/describe';
 import { debugPatch, debugStartEncounter } from '../engine/run';
 import { checkAvailability, stateAfterCurrent } from '../engine/scheduler';
-import type { GameContent, RunState, SelectionSource, StatKey } from '../engine/types';
+import type { GameContent, RunState, SelectionSource, StatParam } from '../engine/types';
 
 // 테스트 플레이용 패널: 상태를 직접 바꾸고, 각 인카운터가 왜 나오는지/안 나오는지 확인한다.
 
@@ -25,8 +26,30 @@ interface Props {
 export function DebugPanel({ content, state, setState, onNewRun, onClose }: Props) {
   const [tab, setTab] = useState<'state' | 'spawn'>('spawn');
   const [addItem, setAddItem] = useState('');
-  const patch = (fn: (draft: RunState) => void) => setState((s) => (s ? debugPatch(s, fn) : s));
+  const patch = (fn: (draft: RunState) => void) => setState((s) => (s ? debugPatch(content, s, fn) : s));
   const nextState = useMemo(() => stateAfterCurrent(state), [state]);
+  const stats = content.params.filter((p): p is StatParam => p.kind === 'stat');
+  /** 큰 수치는 10씩 */
+  const step = (p: StatParam) => ((p.max ?? p.value) >= 30 ? 10 : 1);
+  const statRow = (p: StatParam, field: 'value' | 'max') => {
+    const s = state.stats[p.id] ?? { value: p.value, max: p.max };
+    const v = field === 'max' ? s.max : s.value;
+    if (v == null) return null;
+    const set = (n: number) =>
+      patch((d) => {
+        const cur = (d.stats[p.id] ??= { value: p.value, max: p.max });
+        if (field === 'max') cur.max = n;
+        else cur.value = n;
+      });
+    return (
+      <div key={`${p.id}:${field}`} className="debug-row">
+        <span title={p.id}>{field === 'max' ? `최대 ${p.name}` : p.name}</span>
+        <button onClick={() => set(v - step(p))}>−</button>
+        <input type="number" value={v} onChange={(e) => set(Number(e.target.value) || 0)} />
+        <button onClick={() => set(v + step(p))}>+</button>
+      </div>
+    );
+  };
 
   return (
     <aside className="debug">
@@ -59,18 +82,40 @@ export function DebugPanel({ content, state, setState, onNewRun, onClose }: Prop
       {tab === 'state' ? (
         <div className="debug-body">
           <h4>수치</h4>
-          {(['hp', 'maxHp', 'sanity', 'maxSanity'] as StatKey[]).map((k) => (
-            <div key={k} className="debug-row">
-              <span>{STAT_LABELS[k]}</span>
-              <button onClick={() => patch((d) => void (d[k] -= k.includes('anity') ? 10 : 1))}>−</button>
-              <input
-                type="number"
-                value={state[k]}
-                onChange={(e) => patch((d) => void (d[k] = Number(e.target.value) || 0))}
-              />
-              <button onClick={() => patch((d) => void (d[k] += k.includes('anity') ? 10 : 1))}>+</button>
-            </div>
-          ))}
+          {stats.length === 0 && <p className="muted">수치 파라미터 없음</p>}
+          {stats.flatMap((p) => [statRow(p, 'value'), statRow(p, 'max')])}
+
+          {content.params.some((p) => p.kind !== 'stat') && <h4>상태 · 캘린더</h4>}
+          {content.params.map((p) =>
+            p.kind === 'text' ? (
+              <div key={p.id} className="debug-row">
+                <span title={p.id}>{p.name}</span>
+                <input
+                  className="wide"
+                  value={state.texts[p.id] ?? ''}
+                  onChange={(e) => patch((d) => void (d.texts[p.id] = e.target.value))}
+                />
+              </div>
+            ) : p.kind === 'date' ? (
+              <div key={p.id} className="debug-row">
+                <span title={p.id}>{p.name}</span>
+                <button onClick={() => patch((d) => void (d.dates[p.id] = addDays(d.dates[p.id] ?? p.value, -1)))}>−</button>
+                <input
+                  className="wide"
+                  type="date"
+                  value={state.dates[p.id] ?? p.value}
+                  onChange={(e) => patch((d) => void (d.dates[p.id] = normalizeDate(e.target.value, d.dates[p.id] ?? p.value)))}
+                />
+                <button onClick={() => patch((d) => void (d.dates[p.id] = addDays(d.dates[p.id] ?? p.value, 1)))}>+</button>
+              </div>
+            ) : null,
+          )}
+          {content.theme.variable && (
+            <p className="muted">
+              색: 배경 {state.colors.background ?? '기본'} · 글자 {state.colors.text ?? '기본'}{' '}
+              <button onClick={() => patch((d) => void (d.colors = { background: null, text: null }))}>기본으로</button>
+            </p>
+          )}
 
           <h4>아이템</h4>
           {Object.entries(state.items).map(([id, count]) => (

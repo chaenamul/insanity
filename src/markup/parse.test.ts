@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { findMarkupProblems, parseLine, stripMarkup } from './parse';
+import { findMarkupProblems, parseLine, scanTags, stripMarkup } from './parse';
 
 const known = (t: string) => ['b', 'i', 'shake', 'color'].includes(t);
 
@@ -42,5 +42,17 @@ describe('서식 파서', () => {
 
   it('서식은 문단(줄) 안에서만 적용된다', () => {
     expect(findMarkupProblems('[shake]첫 줄\n둘째 줄[/shake]', known)).toHaveLength(2);
+  });
+
+  it('짝이 맞은 서식의 원문 위치를 알려준다', () => {
+    const text = '첫 줄\n가 [shake=strong]**떨림**[/shake]';
+    const spans = scanTags(text, known);
+    const at = (r: [number, number]) => text.slice(r[0], r[1]);
+    expect(spans.map((s) => [s.tag, s.param, at(s.open), at(s.close)])).toEqual([
+      ['b', null, '**', '**'],
+      ['shake', 'strong', '[shake=strong]', '[/shake]'],
+    ]);
+    // 닫히지 않은 서식은 위치 목록에 없다
+    expect(scanTags('[shake]열림 **굵게**', known).map((s) => s.tag)).toEqual(['b']);
   });
 });
